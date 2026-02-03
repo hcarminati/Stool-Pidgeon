@@ -34,11 +34,11 @@ class StoolPigeonGame:
         # Pygame Rect objects for click detection (updated in _refresh)
         self.draw_pile_rect = None      # Clickable area for draw pile
         self.discard_pile_rect = None   # Clickable area for discard pile
-        self.button_rect = None
+        self.knock_button_rect = (50, 550)
 
         # Buttons 
-        self.knock_button = Button((50, 550), 100, 50, 'images/knock-button.png')
-
+        self.knock_button = Button(self.knock_button_rect, 100, 50, 'images/knock-button.png')
+        
         self._setup_game()
 
         if GUI:
@@ -178,7 +178,8 @@ class StoolPigeonGame:
                 self.discard_pile.append(card)
                 # Print card info for debugging
                 print(f"Drew: {card.card_type.name}" + (f" ({card.value})" if card.value else ""))
-
+        if self.knock_button_rect:
+             print(f"Knocked.")
 
     def _create_deck(self):
         """Create a full deck of cards with proper distribution.
