@@ -2,6 +2,7 @@ import random
 import pygame
 from cards import CardType
 from cards import Card  
+from button import Button 
 
 class StoolPigeonGame:
     """Main game class that handles game logic, rendering, and user input."""
@@ -33,6 +34,10 @@ class StoolPigeonGame:
         # Pygame Rect objects for click detection (updated in _refresh)
         self.draw_pile_rect = None      # Clickable area for draw pile
         self.discard_pile_rect = None   # Clickable area for discard pile
+        self.button_rect = None
+
+        # Buttons 
+        self.knock_button = Button((50, 550), 100, 50, 'images/knock-button.png')
 
         self._setup_game()
 
@@ -132,6 +137,9 @@ class StoolPigeonGame:
                 mouse_pos,
                 face_up=False,  # Hide card details
             )
+
+        # ========== KNOCK BUTTON ==========
+        self.knock_button.draw(self.screen, mouse_pos)
 
         # Update the display with all drawn elements
         pygame.display.flip()
