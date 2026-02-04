@@ -56,20 +56,28 @@ class Card:
         CardType.MEATBALL: (49, 37, 9) 
     }
 
-    def __init__(self, card_type, value=None):
         # card_type: The CardType enum value (e.g., NUMBERED, STOOL_PIGEON)
         # value: Only used for NUMBERED cards (2-10)
+    def __init__(self, card_type, value=None, clickable=True):
         self.card_type = card_type
         self.value = value
         self.face_up = False  # Default to face-down
         self.rect = None  # Updated when drawn; used for click detection
+        self.clickable = clickable
 
     def get_image_file(self):
         """Return the image file path for this card, if it has one."""
         if self.card_type == CardType.NUMBERED: 
             return f'images/witness-{self.value}.png'
-        else:
-            return self.IMAGE_FILES.get(self.card_type, None)
+        return self.IMAGE_FILES.get(self.card_type, None)
+
+    def enable(self):
+        """Make the card clickable."""
+        self.clickable = True
+    
+    def disable(self):
+        """Make the card non-clickable (no hover effect, ignored by clicks)."""
+        self.clickable = False
 
     def draw(self, screen, position, font, small_font, mouse_pos=None, face_up=None):
         """
@@ -103,13 +111,11 @@ class Card:
             pygame.draw.rect(screen, card_color, self.rect)
     
         # Hover effect: brighten color if mouse is over this card
-        if mouse_pos and self.rect.collidepoint(mouse_pos):
-            pygame.draw.rect(screen, (255, 255, 255), (*position, self.CARD_WIDTH, self.CARD_HEIGHT), 3)
+        if self.clickable and mouse_pos and self.rect.collidepoint(mouse_pos):
+            pygame.draw.rect(screen, (255, 255, 255), self.rect, 3)
             
     def _draw_face_down(self, screen, position, mouse_pos):
         """Draw the back of the card (generic purple/blue design for hidden cards)."""
-        self.get_image_file()
-        # use the cardback.png image for the back of the card
         try:
             cardback_image = pygame.image.load("images/cardback.png")
             cardback_image = pygame.transform.scale(cardback_image, (self.CARD_WIDTH, self.CARD_HEIGHT))
@@ -119,5 +125,5 @@ class Card:
             pygame.draw.rect(screen, (80, 50, 100), self.rect, 2)
 
         # Hover highlight: show white border if mouse is over this card
-        if mouse_pos and self.rect.collidepoint(mouse_pos):
-            pygame.draw.rect(screen, (255, 255, 255), (*position, self.CARD_WIDTH, self.CARD_HEIGHT), 3)
+        if self.clickable and mouse_pos and self.rect.collidepoint(mouse_pos):
+            pygame.draw.rect(screen, (255, 255, 255), self.rect, 3)

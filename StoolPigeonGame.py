@@ -34,10 +34,10 @@ class StoolPigeonGame:
         # Pygame Rect objects for click detection (updated in _refresh)
         self.draw_pile_rect = None      # Clickable area for draw pile
         self.discard_pile_rect = None   # Clickable area for discard pile
-        self.knock_button_rect = (50, 550)
 
         # Buttons 
-        self.knock_button = Button(self.knock_button_rect, 100, 50, 'images/knock-button.png')
+        self.knock_button = Button((50, 550), 100, 50, 'images/knock-button.png')
+        self.knock_button_rect = self.knock_button.rect
         
         self._setup_game()
 
@@ -104,6 +104,7 @@ class StoolPigeonGame:
             top_card = self.discard_pile[-1]
             top_card.draw(self.screen, (450, 280), self.font, self.tinyFont, mouse_pos, face_up=True)
             self.discard_pile_rect = top_card.rect
+            top_card.disable()
         else:
             # Show empty discard pile placeholder (gray rectangle)
             self.discard_pile_rect = pygame.Rect(450, 280, Card.CARD_WIDTH, Card.CARD_HEIGHT)
@@ -124,6 +125,8 @@ class StoolPigeonGame:
                 mouse_pos,
                 face_up=side,  # Show card details
             )
+            # TODO: Disable cards and piles when it is the agent's turn
+            card.disable() if i< 2 else card.enable()
         
         # ========== AGENT HAND ==========
         # Display agent's cards face-down at the top
@@ -137,6 +140,7 @@ class StoolPigeonGame:
                 mouse_pos,
                 face_up=False,  # Hide card details
             )
+            card.disable()
 
         # ========== KNOCK BUTTON ==========
         self.knock_button.draw(self.screen, mouse_pos)
@@ -178,7 +182,7 @@ class StoolPigeonGame:
                 self.discard_pile.append(card)
                 # Print card info for debugging
                 print(f"Drew: {card.card_type.name}" + (f" ({card.value})" if card.value else ""))
-        if self.knock_button_rect:
+        if self.knock_button_rect and self.knock_button_rect.collidepoint(pos):
              print(f"Knocked.")
 
     def _create_deck(self):
