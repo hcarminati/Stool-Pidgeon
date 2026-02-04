@@ -36,7 +36,7 @@ class StoolPigeonGame:
         self.discard_pile_rect = None   # Clickable area for discard pile
 
         # Buttons 
-        self.knock_button = Button((50, 550), 100, 50, 'images/knock-button.png')
+        self.knock_button = Button((50, 575), 100, 50, 'images/knock-button.png')
         self.knock_button_rect = self.knock_button.rect
         
         self._setup_game()
@@ -82,12 +82,12 @@ class StoolPigeonGame:
         pile_label = self.tinyFont.render(
             f"Discard: {len(self.discard_pile)}", True, self.white  
         )
-        self.screen.blit(pile_label, (350, 260))
+        self.screen.blit(pile_label, (350, 270))
         
         # Draw the draw pile (generic card back) if cards remain
         if self.draw_pile:
             top_card = self.draw_pile[-1]
-            top_card.draw(self.screen, (350, 280), self.font, self.tinyFont, mouse_pos, face_up=False)
+            top_card.draw(self.screen, (350, 300), self.font, self.tinyFont, mouse_pos, face_up=False)
             self.draw_pile_rect = top_card.rect
         else:
             self.draw_pile_rect = None
@@ -97,25 +97,25 @@ class StoolPigeonGame:
         pile_label = self.tinyFont.render(
             f"Discard: {len(self.discard_pile)}", True, self.white
         )
-        self.screen.blit(pile_label, (450, 260))
+        self.screen.blit(pile_label, (475, 270))
 
         # Draw the top card of the discard pile (face-up) if it exists
         if self.discard_pile:
             top_card = self.discard_pile[-1]
-            top_card.draw(self.screen, (450, 280), self.font, self.tinyFont, mouse_pos, face_up=True)
+            top_card.draw(self.screen, (475, 300), self.font, self.tinyFont, mouse_pos, face_up=True)
             self.discard_pile_rect = top_card.rect
             top_card.disable()
         else:
             # Show empty discard pile placeholder (gray rectangle)
-            self.discard_pile_rect = pygame.Rect(450, 280, Card.CARD_WIDTH, Card.CARD_HEIGHT)
+            self.discard_pile_rect = pygame.Rect(475, 300, Card.CARD_WIDTH, Card.CARD_HEIGHT)
             pygame.draw.rect(self.screen, (200, 200, 200), self.discard_pile_rect, 2)
 
         # ========== PLAYER HAND ==========
         # Display player's cards face-up at the bottom
         hand_label = self.tinyFont.render("Your Hand:", True, self.white)
-        self.screen.blit(hand_label, (350, 400))
+        self.screen.blit(hand_label, (350, 420))
         for i, card in enumerate(self.user_hand):
-            pos = (375 + i * (Card.CARD_WIDTH + 10), 430) if i < 2 else (375 + (i-2) * (Card.CARD_WIDTH + 10), 530)
+            pos = (375 + i * (Card.CARD_WIDTH + 10), 450) if i < 2 else (375 + (i-2) * (Card.CARD_WIDTH + 10), 550)
             side = False if i < 2 else True
             card.draw(
                 self.screen,
