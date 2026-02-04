@@ -2,6 +2,7 @@ import random
 import pygame
 from cards import CardType
 from cards import Card  
+from button import Button 
 
 class StoolPigeonGame:
     """Main game class that handles game logic, rendering, and user input."""
@@ -34,6 +35,10 @@ class StoolPigeonGame:
         self.draw_pile_rect = None      # Clickable area for draw pile
         self.discard_pile_rect = None   # Clickable area for discard pile
 
+        # Buttons 
+        self.knock_button = Button((50, 550), 100, 50, 'images/knock-button.png')
+        self.knock_button_rect = self.knock_button.rect
+        
         self._setup_game()
 
         if GUI:
@@ -99,6 +104,7 @@ class StoolPigeonGame:
             top_card = self.discard_pile[-1]
             top_card.draw(self.screen, (450, 280), self.font, self.tinyFont, mouse_pos, face_up=True)
             self.discard_pile_rect = top_card.rect
+            top_card.disable()
         else:
             # Show empty discard pile placeholder (gray rectangle)
             self.discard_pile_rect = pygame.Rect(450, 280, Card.CARD_WIDTH, Card.CARD_HEIGHT)
@@ -119,6 +125,8 @@ class StoolPigeonGame:
                 mouse_pos,
                 face_up=side,  # Show card details
             )
+            # TODO: Disable cards and piles when it is the agent's turn
+            card.disable() if i< 2 else card.enable()
         
         # ========== AGENT HAND ==========
         # Display agent's cards face-down at the top
@@ -132,6 +140,10 @@ class StoolPigeonGame:
                 mouse_pos,
                 face_up=False,  # Hide card details
             )
+            card.disable()
+
+        # ========== KNOCK BUTTON ==========
+        self.knock_button.draw(self.screen, mouse_pos)
 
         # Update the display with all drawn elements
         pygame.display.flip()
@@ -170,7 +182,10 @@ class StoolPigeonGame:
                 self.discard_pile.append(card)
                 # Print card info for debugging
                 print(f"Drew: {card.card_type.name}" + (f" ({card.value})" if card.value else ""))
-
+        
+        # TODO: disable knock when it is not the player's turn
+        if self.knock_button.is_clickable() and self.knock_button_rect and self.knock_button_rect.collidepoint(pos):
+             print(f"Knocked.")
 
     def _create_deck(self):
         """Create a full deck of cards with proper distribution.
