@@ -182,7 +182,9 @@ class StoolPigeonGame:
                 self.discard_pile.append(card)
                 # Print card info for debugging
                 print(f"Drew: {card.card_type.name}" + (f" ({card.value})" if card.value else ""))
-        if self.knock_button_rect and self.knock_button_rect.collidepoint(pos):
+        
+        # TODO: disable knock when it is not the player's turn
+        if self.knock_button.is_clickable() and self.knock_button_rect and self.knock_button_rect.collidepoint(pos):
              print(f"Knocked.")
 
     def _create_deck(self):

@@ -79,6 +79,10 @@ class Card:
         """Make the card non-clickable (no hover effect, ignored by clicks)."""
         self.clickable = False
 
+    def is_clickable(self):
+        """Check if the card is clickable."""
+        return self.clickable
+
     def draw(self, screen, position, font, small_font, mouse_pos=None, face_up=None):
         """
         Draw this card on the screen at the given position.

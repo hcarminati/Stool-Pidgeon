@@ -1,25 +1,27 @@
 import pygame
 
 class Button:
-    def __init__(self, position, width, height, image):
+    def __init__(self, position, width, height, image, clickable=True):
         self.x, self.y = position
         self.width = width
         self.height = height
         self.rect = pygame.Rect(self.x, self.y, width, height)
         self.image = image
-        self.enabled = True
-        self.visible = True
+        self.clickable = clickable
     
-    def contains(self, pos):
-        return self.enabled and self.visible and self.rect.collidepoint(pos)
+    def enable(self):
+        """Make the button clickable."""
+        self.clickable = True
+    
+    def disable(self):
+        """Make the button non-clickable (no hover effect, ignored by clicks)."""
+        self.clickable = False
+
+    def is_clickable(self):
+        """Check if the button is clickable."""
+        return self.clickable
     
     def draw(self, screen, mouse_pos=None):
-        """Draw the button at its fixed position."""
-        if not self.visible:
-            return
-        self._draw_button(screen, mouse_pos)
-    
-    def _draw_button(self, screen, mouse_pos=None):
         try:
             # Load and draw button image
             card_image = pygame.image.load(self.image)
@@ -30,5 +32,5 @@ class Button:
             pygame.draw.rect(screen, "#000", self.rect)
 
         # Hover effect: draw white border if mouse is over this button
-        if mouse_pos and self.rect.collidepoint(mouse_pos):
+        if self.clickable and mouse_pos and self.rect.collidepoint(mouse_pos):
             pygame.draw.rect(screen, (255, 255, 255), self.rect, 3)
