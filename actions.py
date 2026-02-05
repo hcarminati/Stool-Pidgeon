@@ -1,17 +1,52 @@
 from enum import Enum, auto
 
 class ActionType(Enum):
-    SWAP_BLIND = auto()
-    DISCARD = auto()
+    """Types of actions a player can take."""
+    # Basic actions
+    DRAW_FROM_PILE = auto()
+    DRAW_FROM_DISCARD = auto()
+    KEEP_CARD = auto()
+    DISCARD_DRAWN = auto()
     KNOCK = auto()
-    PEEK_OWN = auto()
-    PEEK_OPPONENT = auto()
-    SWAP_ANY_TWO = auto()
-    KINGPIN_ELIMINATE = auto()
-    KINGPIN_ADD = auto()
+    
+    # Special card effects
+    PEEK = auto()               # Stool Pigeon: peek at any card
+    SWAP = auto()               # Bamboozle/Vendetta: swap two cards
+    KINGPIN_ELIMINATE = auto()  # Kingpin: remove own card
+    KINGPIN_ADD = auto()        # Kingpin: add card to opponent
 
 class Action: 
-    def __init__(self, action_type, target_player, target_idx=0):
+    """Represents a player action with optional targets."""
+    
+    def __init__(self, action_type, target_player=None, target_idx=None, second_target=None):
         self.action_type = action_type
         self.target_player = target_player
-        self.target_idx = target_idx
+        self.target_idx = target_idx # Target card index for actions like peeking at a card. 
+        self.second_target = second_target
+    
+    def draw_from_pile():
+        return Action(ActionType.DRAW_FROM_PILE)
+    
+    def draw_from_discard():
+        return Action(ActionType.DRAW_FROM_DISCARD)
+    
+    def keep_card(hand_idx):
+        return Action(ActionType.KEEP_CARD, target_idx=hand_idx)
+    
+    def discard_drawn():
+        return Action(ActionType.DISCARD_DRAWN)
+    
+    def knock():
+        return Action(ActionType.KNOCK)
+    
+    def peek(player_idx, card_idx):
+        return Action(ActionType.PEEK, target_player=player_idx, target_idx=card_idx)
+    
+    def swap(player1, idx1, player2, idx2):
+        return Action(ActionType.SWAP, target_player=player1, target_idx=idx1, second_target=(player2, idx2))
+    
+    def kingpin_eliminate(card_idx):
+        return Action(ActionType.KINGPIN_ELIMINATE, target_idx=card_idx)
+    
+    def kingpin_add(opponent_idx, card_idx):
+        return Action(ActionType.KINGPIN_ADD, target_player=opponent_idx, target_idx=card_idx)
