@@ -83,6 +83,10 @@ class Card:
         """Check if the card is clickable."""
         return self.clickable
 
+    def contains(self, pos):
+        """Check if a position (e.g., mouse click) is inside the card."""
+        return self.is_clickable and self.rect.collidepoint(pos)
+    
     def draw(self, screen, position, font, small_font, mouse_pos=None, face_up=None):
         """
         Draw this card on the screen at the given position.

@@ -21,6 +21,10 @@ class Button:
         """Check if the button is clickable."""
         return self.clickable
     
+    def contains(self, pos):
+        """Check if a position (e.g., mouse click) is inside the button."""
+        return self.is_clickable and self.rect.collidepoint(pos)
+    
     def draw(self, screen, mouse_pos=None):
         try:
             # Load and draw button image
