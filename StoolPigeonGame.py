@@ -3,6 +3,9 @@ import pygame
 from cards import CardType
 from cards import Card  
 from button import Button 
+from game_state import GameState, GamePhase
+from actions import Action, ActionType
+
 
 class StoolPigeonGame:
     """Main game class that handles game logic, rendering, and user input."""
@@ -38,6 +41,9 @@ class StoolPigeonGame:
         # Buttons 
         self.knock_button = Button((50, 575), 100, 50, 'images/knock-button.png')
         self.knock_button_rect = self.knock_button.rect
+
+        # Game state
+        self.state = GameState()
         
         self._setup_game()
 
@@ -77,10 +83,48 @@ class StoolPigeonGame:
         # title_rect = title.get_rect(midtop=(self.screenWidth // 2, 10))
         # self.screen.blit(title, title_rect)
 
+        # ========== DRAWN CARD (during DECIDE phase, user only) ==========
+        if self.state.drawn_card and self.state.is_phase(GamePhase.DECIDE) and self.state.is_user_turn():
+            drawn_label = self.tinyFont.render("You drew:", True, self.white)
+            self.screen.blit(drawn_label, (600, 270))
+            self.state.drawn_card.draw(
+                self.screen,
+                (600, 300),
+                self.font,
+                self.tinyFont,
+                mouse_pos,
+                face_up=True
+            )
+            self.state.drawn_card.disable()
+
+
+        # ========== GAME STATE ==========
+
+        # Shows the current game phase and whose turn it is
+        phase_text = self.tinyFont.render(
+            f"Phase: {self.state.phase.name} | Turn: {self.state.get_current_player_name()}", 
+            True, self.white
+        )
+        self.screen.blit(phase_text, (10, 10))
+        
+        # Displays instructions based on the current phase
+        instructions = self.tinyFont.render(
+            self.state.get_phase_instructions(),
+            True,
+            self.white
+        )
+        self.screen.blit(instructions, (10, 35))
+
+        # Indicates if a player has knocked and shows who initiated it
+        if self.state.has_knocked():
+            knocked_name = "User" if self.state.knocked_by == 0 else "Agent"
+            knock_text = self.tinyFont.render(f"Knocked by: {knocked_name}", True, self.red_orange)
+            self.screen.blit(knock_text, (10, 60))
+        
         # ========== DRAW PILE ==========
         # Label showing how many cards are left in draw pile
         pile_label = self.tinyFont.render(
-            f"Discard: {len(self.discard_pile)}", True, self.white  
+            f"Draw: {len(self.draw_pile)}", True, self.white  
         )
         self.screen.blit(pile_label, (350, 270))
         
@@ -174,15 +218,16 @@ class StoolPigeonGame:
         Args:
             pos: Tuple (x, y) of click position
         """
-        # Check if player clicked on the draw pile
-        if self.draw_pile_rect and self.draw_pile_rect.collidepoint(pos):
-            if self.draw_pile:
-                # Remove a card from draw pile and move it to discard
-                card = self.draw_pile.pop()
-                self.discard_pile.append(card)
-                # Print card info for debugging
-                print(f"Drew: {card.card_type.name}" + (f" ({card.value})" if card.value else ""))
         
+        # Check if player clicked on the draw pile
+        if self.state.is_phase(GamePhase.DRAW):
+            if self.draw_pile_rect and self.draw_pile_rect.collidepoint(pos):
+                if self.draw_pile:
+                    self.state.drawn_card = self.draw_pile.pop()
+                    self.state.phase = GamePhase.DECIDE
+                    print("Phase changed to DECIDE")
+
+                
         # TODO: disable knock when it is not the player's turn
         if self.knock_button.is_clickable() and self.knock_button_rect and self.knock_button_rect.collidepoint(pos):
              print(f"Knocked.")
