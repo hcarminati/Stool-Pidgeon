@@ -60,8 +60,8 @@ class GameState:
             GamePhase.STOOL_PIGEON_PEEK: "Click any card to peek at it",
             GamePhase.STOOL_PIGEON_SWAP: "Swap the Stool Pigeon with one of your cards",
             GamePhase.BAMBOOZLE_SELECT: "Click two face-down cards to swap them",
-            GamePhase.VENDETTA_PEEK: "Peek at any face-down card",
-            GamePhase.VENDETTA_SWAP: "Swap any two cards",
+            GamePhase.VENDETTA_PEEK: "Vendetta: Click any card to peek at it",
+            GamePhase.VENDETTA_SWAP: "Vendetta: Click two cards to swap them",
             GamePhase.FINAL_TURN: "Final turn! Draw and decide",
             GamePhase.GAME_OVER: "Game Over!",
         }

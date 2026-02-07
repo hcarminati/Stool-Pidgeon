@@ -75,6 +75,18 @@ class Action:
                 game.state.pending_effect = CardType.BAMBOOZLE
                 game.state.clear_selection()  # Reset any previous selection
                 print("Bamboozle effect activated! Click two face-down cards to swap them.")
+            
+            # Check if it's a Vendetta - automatically activate peek
+            elif card.card_type == CardType.VENDETTA:
+                game.state.set_phase(GamePhase.VENDETTA_PEEK)
+                game.state.pending_effect = CardType.VENDETTA
+                print("Vendetta effect activated! Peek at one card, then swap any two.")
+            
+            # Check if it's a Vendetta - automatically activate peek
+            elif card.card_type == CardType.VENDETTA:
+                game.state.set_phase(GamePhase.VENDETTA_PEEK)
+                game.state.pending_effect = CardType.VENDETTA
+                print("Vendetta effect activated! Peek at one card, then swap any two.")
 
         # Execute: Keep drawn card 
         elif self.action_type == ActionType.KEEP_CARD:

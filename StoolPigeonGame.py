@@ -55,6 +55,9 @@ class StoolPigeonGame:
         # Track first card selection for Bamboozle
         self.bamboozle_first_card = None  # Tuple of (player_idx, card_idx)
         
+        # Track first card selection for Vendetta swap
+        self.vendetta_first_card = None  # Tuple of (player_idx, card_idx)
+        
         self._setup_game()
 
         if self.GUI:
@@ -101,12 +104,14 @@ class StoolPigeonGame:
         active_mouse = mouse_pos if is_user_turn else None
 
         # ========== DRAWN CARD ==========
-        # Show drawn card during DECIDE, STOOL_PIGEON_PEEK, STOOL_PIGEON_SWAP, and BAMBOOZLE_SELECT phases
+        # Show drawn card during DECIDE, special card phases
         if (self.state.drawn_card and self.state.is_user_turn() and 
             (self.state.is_phase(GamePhase.DECIDE) or 
              self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK) or 
              self.state.is_phase(GamePhase.STOOL_PIGEON_SWAP) or
-             self.state.is_phase(GamePhase.BAMBOOZLE_SELECT))):
+             self.state.is_phase(GamePhase.BAMBOOZLE_SELECT) or
+             self.state.is_phase(GamePhase.VENDETTA_PEEK) or
+             self.state.is_phase(GamePhase.VENDETTA_SWAP))):
             drawn_label = self.tinyFont.render("You drew:", True, self.white)
             self.screen.blit(drawn_label, (600, 270))
             self.state.drawn_card.draw(
@@ -189,12 +194,18 @@ class StoolPigeonGame:
             pos = (375 + i * (Card.CARD_WIDTH + 10), 450) if i < 2 else (375 + (i-2) * (Card.CARD_WIDTH + 10), 550)
             
             # Check if this card is being peeked at
-            is_peeked = (self.peeked_card == (0, i) and 
-                        self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK))
+            is_peeked = ((self.peeked_card == (0, i) and 
+                         self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK)) or
+                        (self.peeked_card == (0, i) and 
+                         self.state.is_phase(GamePhase.VENDETTA_PEEK)))
             
             # Check if this is the first selected card for Bamboozle
             is_first_bamboozle = (self.bamboozle_first_card == (0, i) and
                                  self.state.is_phase(GamePhase.BAMBOOZLE_SELECT))
+            
+            # Check if this is the first selected card for Vendetta swap
+            is_first_vendetta = (self.vendetta_first_card == (0, i) and
+                                self.state.is_phase(GamePhase.VENDETTA_SWAP))
             
             # Normally bottom 2 cards are face-up, top 2 are face-down
             # But if we're peeking at this card, show it face-up
@@ -211,7 +222,7 @@ class StoolPigeonGame:
             )
             
             # Highlight first selected card with yellow border
-            if is_first_bamboozle:
+            if is_first_bamboozle or is_first_vendetta:
                 pygame.draw.rect(self.screen, (255, 255, 0), card.rect, 4)
             
             # Enable/disable based on phase
@@ -230,6 +241,15 @@ class StoolPigeonGame:
                     card.enable()
                 else:
                     card.disable()
+            elif self.state.is_phase(GamePhase.VENDETTA_PEEK):
+                # During Vendetta peek, enable all cards
+                if is_peeked:
+                    card.disable()
+                else:
+                    card.enable()
+            elif self.state.is_phase(GamePhase.VENDETTA_SWAP):
+                # During Vendetta swap, enable all cards
+                card.enable()
             elif self.state.is_phase(GamePhase.DECIDE):
                 # During decide, enable all cards for potential swapping
                 card.enable()
@@ -243,12 +263,18 @@ class StoolPigeonGame:
             pos = (375 + i * (Card.CARD_WIDTH + 10), 150) if i < 2 else (375 + (i-2) * (Card.CARD_WIDTH + 10), 50)
             
             # Check if this card is being peeked at
-            is_peeked = (self.peeked_card == (1, i) and 
-                        self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK))
+            is_peeked = ((self.peeked_card == (1, i) and 
+                         self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK)) or
+                        (self.peeked_card == (1, i) and 
+                         self.state.is_phase(GamePhase.VENDETTA_PEEK)))
             
             # Check if this is the first selected card for Bamboozle
             is_first_bamboozle = (self.bamboozle_first_card == (1, i) and
                                  self.state.is_phase(GamePhase.BAMBOOZLE_SELECT))
+            
+            # Check if this is the first selected card for Vendetta swap
+            is_first_vendetta = (self.vendetta_first_card == (1, i) and
+                                self.state.is_phase(GamePhase.VENDETTA_SWAP))
             
             card.draw(
                 self.screen,
@@ -261,7 +287,7 @@ class StoolPigeonGame:
             )
             
             # Highlight first selected card with yellow border
-            if is_first_bamboozle:
+            if is_first_bamboozle or is_first_vendetta:
                 pygame.draw.rect(self.screen, (255, 255, 0), card.rect, 4)
             
             # During peek phase, enable agent cards for selection
@@ -273,6 +299,15 @@ class StoolPigeonGame:
             elif self.state.is_phase(GamePhase.BAMBOOZLE_SELECT):
                 # During bamboozle, enable all agent cards (they're all face-down)
                 card.enable()
+            elif self.state.is_phase(GamePhase.VENDETTA_PEEK):
+                # During Vendetta peek, enable all agent cards
+                if is_peeked:
+                    card.disable()
+                else:
+                    card.enable()
+            elif self.state.is_phase(GamePhase.VENDETTA_SWAP):
+                # During Vendetta swap, enable all agent cards
+                card.enable()
             else:
                 card.disable()
 
@@ -280,12 +315,16 @@ class StoolPigeonGame:
         # Only show knock button in normal phases
         if (not self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK) and 
             not self.state.is_phase(GamePhase.STOOL_PIGEON_SWAP) and
-            not self.state.is_phase(GamePhase.BAMBOOZLE_SELECT)):
+            not self.state.is_phase(GamePhase.BAMBOOZLE_SELECT) and
+            not self.state.is_phase(GamePhase.VENDETTA_PEEK) and
+            not self.state.is_phase(GamePhase.VENDETTA_SWAP)):
             self.knock_button.draw(self.screen, active_mouse)
         
         # ========== DONE BUTTON ==========
-        # Show done button during peek phase when a card is selected
-        if self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK) and self.peeked_card is not None:
+        # Show done button during peek phases when a card is selected
+        if ((self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK) or 
+             self.state.is_phase(GamePhase.VENDETTA_PEEK)) and 
+            self.peeked_card is not None):
             self.done_button.draw(self.screen, active_mouse)
 
         # Update the display with all drawn elements
@@ -400,11 +439,66 @@ class StoolPigeonGame:
                         self.bamboozle_first_card = None
                     return
         
+        # ========== VENDETTA PEEK PHASE ==========
+        elif self.state.is_phase(GamePhase.VENDETTA_PEEK):
+            # Check if clicked on a user card
+            for i, card in enumerate(self.user_hand):
+                if card.contains(pos):
+                    self.peeked_card = (0, i)
+                    print(f"Vendetta: Peeking at your card {i}")
+                    return
+            
+            # Check if clicked on an agent card
+            for i, card in enumerate(self.agent_hands):
+                if card.contains(pos):
+                    self.peeked_card = (1, i)
+                    print(f"Vendetta: Peeking at agent's card {i}")
+                    return
+            
+            # Check if clicked done button
+            if self.peeked_card and self.done_button.contains(pos):
+                print("Done peeking. Now swap any two cards.")
+                self.peeked_card = None
+                self.state.set_phase(GamePhase.VENDETTA_SWAP)
+                self.state.clear_selection()  # Reset selection for swap phase
+        
+        # ========== VENDETTA SWAP PHASE ==========
+        elif self.state.is_phase(GamePhase.VENDETTA_SWAP):
+            # Check if clicked on a user card
+            for i, card in enumerate(self.user_hand):
+                if card.contains(pos):
+                    if self.vendetta_first_card is None:
+                        # First card selection
+                        self.vendetta_first_card = (0, i)
+                        print(f"Vendetta: Selected first card - Your card {i}")
+                    else:
+                        # Second card selection - execute swap
+                        player1_idx, card1_idx = self.vendetta_first_card
+                        Action.swap(player1_idx, card1_idx, 0, i).execute_action(self, GamePhase)
+                        self.vendetta_first_card = None
+                    return
+            
+            # Check if clicked on an agent card
+            for i, card in enumerate(self.agent_hands):
+                if card.contains(pos):
+                    if self.vendetta_first_card is None:
+                        # First card selection
+                        self.vendetta_first_card = (1, i)
+                        print(f"Vendetta: Selected first card - Agent's card {i}")
+                    else:
+                        # Second card selection - execute swap
+                        player1_idx, card1_idx = self.vendetta_first_card
+                        Action.swap(player1_idx, card1_idx, 1, i).execute_action(self, GamePhase)
+                        self.vendetta_first_card = None
+                    return
+        
         # ========== KNOCK BUTTON ==========
         if self.knock_button.contains(pos) and not self.state.has_knocked():
             if (not self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK) and 
                 not self.state.is_phase(GamePhase.STOOL_PIGEON_SWAP) and
-                not self.state.is_phase(GamePhase.BAMBOOZLE_SELECT)):
+                not self.state.is_phase(GamePhase.BAMBOOZLE_SELECT) and
+                not self.state.is_phase(GamePhase.VENDETTA_PEEK) and
+                not self.state.is_phase(GamePhase.VENDETTA_SWAP)):
                 Action.knock().execute_action(self, GamePhase)
 
     def _create_deck(self):
