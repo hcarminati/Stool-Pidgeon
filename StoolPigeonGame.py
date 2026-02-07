@@ -45,6 +45,12 @@ class StoolPigeonGame:
         # Done button for card effects
         self.done_button = Button((750, 575), 100, 50, 'images/done-button.png')
         self.done_button_rect = self.done_button.rect
+        
+        # Kingpin choice buttons
+        self.eliminate_button = Button((350, 400), 150, 50, 'images/eliminate-button.png')
+        self.eliminate_button_rect = self.eliminate_button.rect
+        self.add_button = Button((520, 400), 150, 50, 'images/add-button.png')
+        self.add_button_rect = self.add_button.rect
 
         # Game state
         self.state = GameState()
@@ -57,6 +63,10 @@ class StoolPigeonGame:
         
         # Track first card selection for Vendetta swap
         self.vendetta_first_card = None  # Tuple of (player_idx, card_idx)
+        
+        # Error message display
+        self.error_message = None
+        self.error_message_timer = 0
         
         self._setup_game()
 
@@ -95,6 +105,11 @@ class StoolPigeonGame:
         """Return the opponent's hand"""
         return self.agent_hands if self.state.is_user_turn() else self.user_hand
     
+    def show_error_message(self, message, duration=3):
+        """Display an error message for a specified duration (in seconds)."""
+        self.error_message = message
+        self.error_message_timer = duration * self.fps  # Convert seconds to frames
+    
     def _refresh(self):
         """Redraw the entire game screen. Called every frame."""
         mouse_pos = pygame.mouse.get_pos()
@@ -111,7 +126,10 @@ class StoolPigeonGame:
              self.state.is_phase(GamePhase.STOOL_PIGEON_SWAP) or
              self.state.is_phase(GamePhase.BAMBOOZLE_SELECT) or
              self.state.is_phase(GamePhase.VENDETTA_PEEK) or
-             self.state.is_phase(GamePhase.VENDETTA_SWAP))):
+             self.state.is_phase(GamePhase.VENDETTA_SWAP) or
+             self.state.is_phase(GamePhase.KINGPIN_CHOOSE) or
+             self.state.is_phase(GamePhase.KINGPIN_ELIMINATE) or
+             self.state.is_phase(GamePhase.KINGPIN_ADD))):
             drawn_label = self.tinyFont.render("You drew:", True, self.white)
             self.screen.blit(drawn_label, (600, 270))
             self.state.drawn_card.draw(
@@ -191,6 +209,10 @@ class StoolPigeonGame:
         hand_label = self.tinyFont.render("Your Hand:", True, self.white)
         self.screen.blit(hand_label, (350, 420))
         for i, card in enumerate(self.user_hand):
+            # Skip eliminated cards (None)
+            if card is None:
+                continue
+                
             pos = (375 + i * (Card.CARD_WIDTH + 10), 450) if i < 2 else (375 + (i-2) * (Card.CARD_WIDTH + 10), 550)
             
             # Check if this card is being peeked at
@@ -233,10 +255,14 @@ class StoolPigeonGame:
                 else:
                     card.enable()
             elif self.state.is_phase(GamePhase.STOOL_PIGEON_SWAP):
-                # During swap, enable all cards for swapping
-                card.enable()
+                # During Stool Pigeon swap, disable RAT cards (they can't be swapped out with regular swaps)
+                if card.card_type == CardType.RAT:
+                    card.disable()
+                else:
+                    card.enable()
             elif self.state.is_phase(GamePhase.BAMBOOZLE_SELECT):
-                # During bamboozle, only enable face-down cards (top 2)
+                # During bamboozle, enable face-down cards (top 2) - INCLUDING RAT cards!
+                # This allows you to pass RAT cards to opponents
                 if i < 2:
                     card.enable()
                 else:
@@ -248,18 +274,32 @@ class StoolPigeonGame:
                 else:
                     card.enable()
             elif self.state.is_phase(GamePhase.VENDETTA_SWAP):
-                # During Vendetta swap, enable all cards
+                # During Vendetta swap, enable all cards - INCLUDING RAT cards!
+                # This allows you to pass RAT cards to opponents
+                card.enable()
+            elif self.state.is_phase(GamePhase.KINGPIN_ELIMINATE):
+                # During Kingpin eliminate, enable all cards (even RAT can be eliminated!)
                 card.enable()
             elif self.state.is_phase(GamePhase.DECIDE):
-                # During decide, enable all cards for potential swapping
-                card.enable()
+                # During decide, disable RAT cards (can't swap them out with regular swaps)
+                if card.card_type == CardType.RAT:
+                    card.disable()
+                else:
+                    card.enable()
             else:
                 # Normal phases - top 2 cards (index 0,1) disabled, bottom 2 enabled
-                card.disable() if i < 2 else card.enable()
+                if i < 2:
+                    card.disable()
+                else:
+                    card.enable()
         
         # ========== AGENT HAND ==========
         # Display agent's cards face-down at the top
         for i, card in enumerate(self.agent_hands):
+            # Skip eliminated cards (None)
+            if card is None:
+                continue
+                
             pos = (375 + i * (Card.CARD_WIDTH + 10), 150) if i < 2 else (375 + (i-2) * (Card.CARD_WIDTH + 10), 50)
             
             # Check if this card is being peeked at
@@ -297,7 +337,7 @@ class StoolPigeonGame:
                 else:
                     card.enable()
             elif self.state.is_phase(GamePhase.BAMBOOZLE_SELECT):
-                # During bamboozle, enable all agent cards (they're all face-down)
+                # During bamboozle, enable all agent cards
                 card.enable()
             elif self.state.is_phase(GamePhase.VENDETTA_PEEK):
                 # During Vendetta peek, enable all agent cards
@@ -306,7 +346,7 @@ class StoolPigeonGame:
                 else:
                     card.enable()
             elif self.state.is_phase(GamePhase.VENDETTA_SWAP):
-                # During Vendetta swap, enable all agent cards
+                # During Vendetta swap, enable all agent cards (RAT can be swapped)
                 card.enable()
             else:
                 card.disable()
@@ -317,7 +357,10 @@ class StoolPigeonGame:
             not self.state.is_phase(GamePhase.STOOL_PIGEON_SWAP) and
             not self.state.is_phase(GamePhase.BAMBOOZLE_SELECT) and
             not self.state.is_phase(GamePhase.VENDETTA_PEEK) and
-            not self.state.is_phase(GamePhase.VENDETTA_SWAP)):
+            not self.state.is_phase(GamePhase.VENDETTA_SWAP) and
+            not self.state.is_phase(GamePhase.KINGPIN_CHOOSE) and
+            not self.state.is_phase(GamePhase.KINGPIN_ELIMINATE) and
+            not self.state.is_phase(GamePhase.KINGPIN_ADD)):
             self.knock_button.draw(self.screen, active_mouse)
         
         # ========== DONE BUTTON ==========
@@ -326,6 +369,29 @@ class StoolPigeonGame:
              self.state.is_phase(GamePhase.VENDETTA_PEEK)) and 
             self.peeked_card is not None):
             self.done_button.draw(self.screen, active_mouse)
+        
+        # ========== KINGPIN CHOICE BUTTONS ==========
+        # Show Eliminate and Add buttons during Kingpin choice phase
+        if self.state.is_phase(GamePhase.KINGPIN_CHOOSE):
+            self.eliminate_button.draw(self.screen, active_mouse)
+            self.add_button.draw(self.screen, active_mouse)
+        
+        # ========== ERROR MESSAGE ==========
+        # Display error message if active
+        if self.error_message and self.error_message_timer > 0:
+            error_surface = self.font.render(self.error_message, True, self.red_orange)
+            error_rect = error_surface.get_rect(center=(self.screenWidth // 2, self.screenHeight // 2))
+            # Draw semi-transparent background
+            bg_rect = error_rect.inflate(40, 20)
+            bg_surface = pygame.Surface((bg_rect.width, bg_rect.height))
+            bg_surface.set_alpha(200)
+            bg_surface.fill((0, 0, 0))
+            self.screen.blit(bg_surface, bg_rect)
+            # Draw message
+            self.screen.blit(error_surface, error_rect)
+            self.error_message_timer -= 1
+            if self.error_message_timer <= 0:
+                self.error_message = None
 
         # Update the display with all drawn elements
         pygame.display.flip()
@@ -333,8 +399,12 @@ class StoolPigeonGame:
     
     def _loop_gui(self):
         """Main game loop: continuously refresh screen and handle user input."""
-        running = True 
+        running = True
+        clock = pygame.time.Clock()  # Create clock for frame rate control
+        
         while running: 
+            clock.tick(self.fps)  # Limit to specified FPS
+            
             # Draw background
             if self.background:
                 self.screen.blit(self.background, (0, 0))
@@ -371,7 +441,7 @@ class StoolPigeonGame:
             # For normal cards, allow keeping or discarding
             # Click on hand card = swap with drawn card
             for i, card in enumerate(self.user_hand):
-                if card.contains(pos):
+                if card is not None and card.contains(pos):
                     Action.keep_card(i).execute_action(self, GamePhase)
                     return
             # Click on discard pile = discard drawn card
@@ -382,14 +452,14 @@ class StoolPigeonGame:
         elif self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK):
             # Check if clicked on a user card
             for i, card in enumerate(self.user_hand):
-                if card.contains(pos):
+                if card is not None and card.contains(pos):
                     self.peeked_card = (0, i)  # Player 0, card index i
                     print(f"Peeking at your card {i}")
                     return
             
             # Check if clicked on an agent card
             for i, card in enumerate(self.agent_hands):
-                if card.contains(pos):
+                if card is not None and card.contains(pos):
                     self.peeked_card = (1, i)  # Player 1 (agent), card index i
                     print(f"Peeking at agent's card {i}")
                     return
@@ -404,7 +474,7 @@ class StoolPigeonGame:
         elif self.state.is_phase(GamePhase.STOOL_PIGEON_SWAP):
             # Click on hand card to swap with drawn Stool Pigeon
             for i, card in enumerate(self.user_hand):
-                if card.contains(pos):
+                if card is not None and card.contains(pos):
                     Action.keep_card(i).execute_action(self, GamePhase)
                     self.state.pending_effect = None
                     return
@@ -413,7 +483,7 @@ class StoolPigeonGame:
         elif self.state.is_phase(GamePhase.BAMBOOZLE_SELECT):
             # Check if clicked on a user card (only face-down cards, indices 0-1)
             for i, card in enumerate(self.user_hand):
-                if card.contains(pos):
+                if card is not None and card.contains(pos):
                     if self.bamboozle_first_card is None:
                         # First card selection
                         self.bamboozle_first_card = (0, i)
@@ -427,7 +497,7 @@ class StoolPigeonGame:
             
             # Check if clicked on an agent card
             for i, card in enumerate(self.agent_hands):
-                if card.contains(pos):
+                if card is not None and card.contains(pos):
                     if self.bamboozle_first_card is None:
                         # First card selection
                         self.bamboozle_first_card = (1, i)
@@ -443,14 +513,14 @@ class StoolPigeonGame:
         elif self.state.is_phase(GamePhase.VENDETTA_PEEK):
             # Check if clicked on a user card
             for i, card in enumerate(self.user_hand):
-                if card.contains(pos):
+                if card is not None and card.contains(pos):
                     self.peeked_card = (0, i)
                     print(f"Vendetta: Peeking at your card {i}")
                     return
             
             # Check if clicked on an agent card
             for i, card in enumerate(self.agent_hands):
-                if card.contains(pos):
+                if card is not None and card.contains(pos):
                     self.peeked_card = (1, i)
                     print(f"Vendetta: Peeking at agent's card {i}")
                     return
@@ -466,7 +536,7 @@ class StoolPigeonGame:
         elif self.state.is_phase(GamePhase.VENDETTA_SWAP):
             # Check if clicked on a user card
             for i, card in enumerate(self.user_hand):
-                if card.contains(pos):
+                if card is not None and card.contains(pos):
                     if self.vendetta_first_card is None:
                         # First card selection
                         self.vendetta_first_card = (0, i)
@@ -480,7 +550,7 @@ class StoolPigeonGame:
             
             # Check if clicked on an agent card
             for i, card in enumerate(self.agent_hands):
-                if card.contains(pos):
+                if card is not None and card.contains(pos):
                     if self.vendetta_first_card is None:
                         # First card selection
                         self.vendetta_first_card = (1, i)
@@ -492,13 +562,38 @@ class StoolPigeonGame:
                         self.vendetta_first_card = None
                     return
         
+        # ========== KINGPIN CHOOSE PHASE ==========
+        elif self.state.is_phase(GamePhase.KINGPIN_CHOOSE):
+            # Check if clicked Eliminate button
+            if self.eliminate_button.contains(pos):
+                self.state.set_phase(GamePhase.KINGPIN_ELIMINATE)
+                print("Kingpin: Eliminate mode - click a card to remove it from the game")
+                return
+            
+            # Check if clicked Add button
+            if self.add_button.contains(pos):
+                # Execute add immediately (draws card and adds to opponent)
+                Action.kingpin_add(1 if self.state.is_user_turn() else 0, 0).execute_action(self, GamePhase)
+                return
+        
+        # ========== KINGPIN ELIMINATE PHASE ==========
+        elif self.state.is_phase(GamePhase.KINGPIN_ELIMINATE):
+            # Click on any of your cards to eliminate it
+            for i, card in enumerate(self.user_hand):
+                if card is not None and card.contains(pos):
+                    Action.kingpin_eliminate(i).execute_action(self, GamePhase)
+                    return
+        
         # ========== KNOCK BUTTON ==========
         if self.knock_button.contains(pos) and not self.state.has_knocked():
             if (not self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK) and 
                 not self.state.is_phase(GamePhase.STOOL_PIGEON_SWAP) and
                 not self.state.is_phase(GamePhase.BAMBOOZLE_SELECT) and
                 not self.state.is_phase(GamePhase.VENDETTA_PEEK) and
-                not self.state.is_phase(GamePhase.VENDETTA_SWAP)):
+                not self.state.is_phase(GamePhase.VENDETTA_SWAP) and
+                not self.state.is_phase(GamePhase.KINGPIN_CHOOSE) and
+                not self.state.is_phase(GamePhase.KINGPIN_ELIMINATE) and
+                not self.state.is_phase(GamePhase.KINGPIN_ADD)):
                 Action.knock().execute_action(self, GamePhase)
 
     def _create_deck(self):

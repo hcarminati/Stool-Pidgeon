@@ -16,26 +16,6 @@ class Card:
     CARD_WIDTH = 65
     CARD_HEIGHT = 90
 
-    # Display names for special cards (split across multiple lines)
-    CARD_NAMES = {
-        CardType.STOOL_PIGEON: "STOOL\nPIGEON",
-        CardType.BAMBOOZLE: "BAM-\nBOOZLE",
-        CardType.VENDETTA: "VEN-\nDETTA",
-        CardType.KINGPIN: "KING-\nPIN",
-        CardType.RAT: "RAT",
-        CardType.MEATBALL: "MEAT-\nBALL"
-    }
-    
-    # Short descriptions shown on cards
-    CARD_DESCRIPTIONS = {
-        CardType.STOOL_PIGEON: "Peek 1",
-        CardType.BAMBOOZLE: "Swap 2",
-        CardType.VENDETTA: "Peek+Swap",
-        CardType.KINGPIN: "Elim/Add",
-        CardType.RAT: "Sticky",
-        CardType.MEATBALL: "= 0"
-    }
-
     IMAGE_FILES = {
         CardType.STOOL_PIGEON: "images/stool_pigeon.png",
         CardType.BAMBOOZLE: "images/bamboozle.png",

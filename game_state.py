@@ -10,6 +10,9 @@ class GamePhase(Enum):
     BAMBOOZLE_SELECT = auto()   # Bamboozle: select two face-down cards to swap
     VENDETTA_PEEK = auto()      # Vendetta phase 1: peek at a card
     VENDETTA_SWAP = auto()      # Vendetta phase 2: swap two cards
+    KINGPIN_CHOOSE = auto()     # Kingpin: choose eliminate or add
+    KINGPIN_ELIMINATE = auto()  # Kingpin: select card to eliminate
+    KINGPIN_ADD = auto()        # Kingpin: select opponent to give card to
     FINAL_TURN = auto()         # After someone knocks, others get one last turn
     GAME_OVER = auto()          # Game has ended, show scores
 
@@ -62,6 +65,9 @@ class GameState:
             GamePhase.BAMBOOZLE_SELECT: "Click two face-down cards to swap them",
             GamePhase.VENDETTA_PEEK: "Vendetta: Click any card to peek at it",
             GamePhase.VENDETTA_SWAP: "Vendetta: Click two cards to swap them",
+            GamePhase.KINGPIN_CHOOSE: "Kingpin: Choose to Eliminate a card or Add card to opponent",
+            GamePhase.KINGPIN_ELIMINATE: "Kingpin: Click one of your cards to eliminate it",
+            GamePhase.KINGPIN_ADD: "Kingpin: Click an opponent card slot to add a card",
             GamePhase.FINAL_TURN: "Final turn! Draw and decide",
             GamePhase.GAME_OVER: "Game Over!",
         }
