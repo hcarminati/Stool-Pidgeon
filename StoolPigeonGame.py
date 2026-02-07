@@ -237,10 +237,12 @@ class StoolPigeonGame:
         if not self.state.is_user_turn():
             return
         
-        # Check if player clicked on the draw pile
+        # Check if player clicked on the draw pile or discard pile
         if self.state.is_phase(GamePhase.DRAW):
             if self.draw_pile_rect and self.draw_pile_rect.collidepoint(pos):
                 Action.draw_from_pile().execute_action(game, GamePhase)
+            elif self.discard_pile_rect and self.discard_pile_rect.collidepoint(pos) and self.discard_pile:
+                Action.draw_from_discard().execute_action(game, GamePhase)
 
         # Player needs to decide what to do with the card 
         elif self.state.is_phase(GamePhase.DECIDE):

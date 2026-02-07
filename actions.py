@@ -71,13 +71,19 @@ class Action:
             game.discard_pile.append(old_card)
             game.state.drawn_card = None
         
-        # Execute: Draw from discard pile
+        # Execute: Discard drawn card
         elif self.action_type == ActionType.DISCARD_DRAWN:
             game.discard_pile.append(game.state.drawn_card)
             game.state.drawn_card = None
             game.state.next_turn()
+
+        # Execute: Draw from discard
+        elif self.action_type == ActionType.DRAW_FROM_DISCARD:
+            card = game.discard_pile.pop()
+            game.state.drawn_card = card
+            game.state.set_phase(GamePhase.DECIDE)
         
-         # Execute: Knock
+        # Execute: Knock
         elif self.action_type == ActionType.KNOCK:
             game.state.handle_knock()
             game.state.next_turn()
