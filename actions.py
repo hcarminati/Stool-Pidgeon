@@ -50,3 +50,25 @@ class Action:
     
     def kingpin_add(opponent_idx, card_idx):
         return Action(ActionType.KINGPIN_ADD, target_player=opponent_idx, target_idx=card_idx)
+    
+    def execute_action(self, game, GamePhase):
+        """Execute an action and update game state."""
+        print(f"Executing: {self.action_type}")
+        
+        # Execute: Draw from pile
+        if self.action_type == ActionType.DRAW_FROM_PILE:
+            card = game.draw_pile.pop()
+            game.state.drawn_card = card
+            game.state.set_phase(GamePhase.DECIDE)
+            print(f"Drew: {card.card_type.name}" + (f" ({card.value})" if card.value else ""))
+
+        # Excute: Keep drawn card 
+        elif self.action_type == ActionType.KEEP_CARD:
+            # Swap drawn card with card in hand
+            hand = game.get_current_hand()
+            old_card = hand[self.target_idx]
+            hand[self.target_idx] = game.state.drawn_card
+            game.discard_pile.append(old_card)
+            game.state.drawn_card = None
+        
+        

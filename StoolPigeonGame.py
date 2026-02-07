@@ -74,6 +74,14 @@ class StoolPigeonGame:
         except pygame.error:
             self.background = None  # If loading fails, use plain background
 
+    def get_current_hand(self):
+        """Returns the current player's hand."""
+        return self.user_hand if self.state.is_user_turn() else self.agent_hands
+
+    def get_opponent_hand(self):
+        """Return the opponent's hand"""
+        return self.agent_hands if self.state.is_user_turn() else self.user_hand
+    
     def _refresh(self):
         """Redraw the entire game screen. Called every frame."""
         mouse_pos = pygame.mouse.get_pos()
@@ -218,15 +226,22 @@ class StoolPigeonGame:
         Args:
             pos: Tuple (x, y) of click position
         """
+        # Only allow actions during user's turn 
+        if not self.state.is_user_turn():
+            return
         
         # Check if player clicked on the draw pile
         if self.state.is_phase(GamePhase.DRAW):
             if self.draw_pile_rect and self.draw_pile_rect.collidepoint(pos):
-                if self.draw_pile:
-                    self.state.drawn_card = self.draw_pile.pop()
-                    self.state.phase = GamePhase.DECIDE
-                    print("Phase changed to DECIDE")
+                Action.draw_from_pile().execute_action(game, GamePhase)
 
+        # Player needs to decide what to do with the card 
+        elif self.state.is_phase(GamePhase.DECIDE):
+            # Click on hand card = swap with drawn card
+            for i, card in enumerate(self.user_hand):
+                if card.contains(pos):
+                    Action.keep_card(i).execute_action(game, GamePhase)
+                    return
                 
         # TODO: disable knock when it is not the player's turn
         if self.knock_button.is_clickable() and self.knock_button_rect and self.knock_button_rect.collidepoint(pos):
