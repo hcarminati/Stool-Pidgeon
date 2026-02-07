@@ -91,6 +91,10 @@ class StoolPigeonGame:
         # title_rect = title.get_rect(midtop=(self.screenWidth // 2, 10))
         # self.screen.blit(title, title_rect)
 
+        mouse_pos = pygame.mouse.get_pos()
+        is_user_turn = self.state.is_user_turn()
+        active_mouse = mouse_pos if is_user_turn else None
+
         # ========== DRAWN CARD (during DECIDE phase, user only) ==========
         if self.state.drawn_card and self.state.is_phase(GamePhase.DECIDE) and self.state.is_user_turn():
             drawn_label = self.tinyFont.render("You drew:", True, self.white)
@@ -100,8 +104,9 @@ class StoolPigeonGame:
                 (600, 300),
                 self.font,
                 self.tinyFont,
-                mouse_pos,
-                face_up=True
+                active_mouse,
+                face_up=True,
+                is_user_turn=is_user_turn
             )
             self.state.drawn_card.disable()
 
@@ -139,7 +144,7 @@ class StoolPigeonGame:
         # Draw the draw pile (generic card back) if cards remain
         if self.draw_pile:
             top_card = self.draw_pile[-1]
-            top_card.draw(self.screen, (350, 300), self.font, self.tinyFont, mouse_pos, face_up=False)
+            top_card.draw(self.screen, (350, 300), self.font, self.tinyFont, active_mouse, face_up=False, is_user_turn=is_user_turn)
             self.draw_pile_rect = top_card.rect
         else:
             self.draw_pile_rect = None
@@ -154,7 +159,7 @@ class StoolPigeonGame:
         # Draw the top card of the discard pile (face-up) if it exists
         if self.discard_pile:
             top_card = self.discard_pile[-1]
-            top_card.draw(self.screen, (475, 300), self.font, self.tinyFont, mouse_pos, face_up=True)
+            top_card.draw(self.screen, (475, 300), self.font, self.tinyFont, active_mouse, face_up=True, is_user_turn=is_user_turn)
             self.discard_pile_rect = top_card.rect
             top_card.disable()
         else:
@@ -174,8 +179,9 @@ class StoolPigeonGame:
                 pos,  # Position: left to right
                 self.font,
                 self.tinyFont,
-                mouse_pos,
+                active_mouse,
                 face_up=side,  # Show card details
+                is_user_turn=is_user_turn
             )
             # TODO: Disable cards and piles when it is the agent's turn
             card.disable() if i< 2 else card.enable()
@@ -189,13 +195,14 @@ class StoolPigeonGame:
                 pos,  # Position: left to right
                 self.font,
                 self.tinyFont,
-                mouse_pos,
+                active_mouse,
                 face_up=False,  # Hide card details
+                is_user_turn=is_user_turn
             )
             card.disable()
 
         # ========== KNOCK BUTTON ==========
-        self.knock_button.draw(self.screen, mouse_pos)
+        self.knock_button.draw(self.screen, active_mouse)
 
         # Update the display with all drawn elements
         pygame.display.flip()
