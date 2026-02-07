@@ -42,9 +42,9 @@ class StoolPigeonGame:
         self.knock_button_rect = self.knock_button.rect
         self.done_button = Button((750, 575), 100, 50, 'images/done-button.png')
         self.done_button_rect = self.done_button.rect
-        self.eliminate_button = Button((350, 400), 150, 50, 'images/eliminate-button.png')
+        self.eliminate_button = Button((700, 500), 150, 50, 'images/eliminate-button.png')
         self.eliminate_button_rect = self.eliminate_button.rect
-        self.add_button = Button((520, 400), 150, 50, 'images/add-button.png')
+        self.add_button = Button((700, 575), 150, 50, 'images/add-button.png')
         self.add_button_rect = self.add_button.rect
 
         # Game state
