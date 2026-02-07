@@ -32,26 +32,30 @@ class GameState:
         """Reset all state to initial values."""
         self.__init__()
     
+    # ========== PLAYER INFO ==========
+    
     def get_current_player_name(self):
         """Returns the current player name."""
         return "User" if self.current_player_idx == 0 else "Agent"
     
     def is_user_turn(self):
-        """Returns true if the current player index is 0, false otherwise."""
+        """Returns true if it's the user's turn."""
         return self.current_player_idx == 0
     
     def is_agent_turn(self):
-        """Returns true if the current player index is 1, false otherwise."""
+        """Returns true if it's the agent's turn."""
         return self.current_player_idx == 1
 
+    # ========== PHASE MANAGEMENT ==========
+    
     def set_phase(self, new_phase):
-        """Sets the current phase to the new passed in phase."""
+        """Sets the current phase."""
         old_phase = self.phase
         self.phase = new_phase
         print(f"Phase: {old_phase.name} -> {new_phase.name}")
     
     def is_phase(self, phase):
-        """Returns true if it is the passed in phase, false otherwise."""
+        """Returns true if current phase matches the given phase."""
         return self.phase == phase
 
     def get_phase_instructions(self):
@@ -73,6 +77,8 @@ class GameState:
         }
         return instructions.get(self.phase, "")
 
+    # ========== TURN MANAGEMENT ==========
+    
     def next_turn(self):
         """Advance to the next player's turn. Returns True if game continues."""
         if self.knocked_by is not None:
@@ -93,6 +99,8 @@ class GameState:
         print(f"--- {self.get_current_player_name()}'s Turn ---")
         return True
 
+    # ========== KNOCK MANAGEMENT ==========
+    
     def handle_knock(self):
         """Handle when a player knocks. Returns True if knock was valid."""
         if self.knocked_by is None and self.phase != GamePhase.GAME_OVER:
@@ -105,6 +113,8 @@ class GameState:
         """Returns true if a player knocked, false otherwise."""
         return self.knocked_by is not None
 
+    # ========== CARD SELECTION ==========
+    
     def select_card(self, player_idx, card_idx):
         """Sets the selected card and player who selected it."""
         self.selected_card = (player_idx, card_idx)
@@ -118,6 +128,8 @@ class GameState:
         """Returns true if there is a selected card, false otherwise."""
         return self.selected_card is not None
 
+    # ========== DEBUG ==========
+    
     def print_state(self):
         """For debugging purposes."""
         print(f"\n=== GAME STATE ===")
