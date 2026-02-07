@@ -2,13 +2,15 @@ from enum import Enum, auto
 
 class GamePhase(Enum):
     """Represents the current phase of the game."""
-    DRAW = auto()           # Player must draw from draw pile or discard pile
-    DECIDE = auto()         # Player decides: keep drawn card or discard it
-    RESOLVE_EFFECT = auto() # Resolving a special card's effect
-    VENDETTA_PEEK = auto()  # Vendetta phase 1: peek at a card
-    VENDETTA_SWAP = auto()  # Vendetta phase 2: swap two cards
-    FINAL_TURN = auto()     # After someone knocks, others get one last turn
-    GAME_OVER = auto()      # Game has ended, show scores
+    DRAW = auto()               # Player must draw from draw pile or discard pile
+    DECIDE = auto()             # Player decides: keep drawn card or discard it
+    RESOLVE_EFFECT = auto()     # Resolving a special card's effect
+    STOOL_PIGEON_PEEK = auto()  # Stool Pigeon: peek at any card
+    STOOL_PIGEON_SWAP = auto()  # Stool Pigeon: swap drawn card with own card
+    VENDETTA_PEEK = auto()      # Vendetta phase 1: peek at a card
+    VENDETTA_SWAP = auto()      # Vendetta phase 2: swap two cards
+    FINAL_TURN = auto()         # After someone knocks, others get one last turn
+    GAME_OVER = auto()          # Game has ended, show scores
 
 class GameState:
     """Holds all game state variables and state-related logic."""
@@ -54,6 +56,8 @@ class GameState:
             GamePhase.DRAW: "Draw a card from the draw pile or discard pile",
             GamePhase.DECIDE: "Keep the card (swap with one of yours) or discard it",
             GamePhase.RESOLVE_EFFECT: f"Resolve {self.pending_effect.name if self.pending_effect else 'effect'}",
+            GamePhase.STOOL_PIGEON_PEEK: "Click any card to peek at it",
+            GamePhase.STOOL_PIGEON_SWAP: "Swap the Stool Pigeon with one of your cards",
             GamePhase.VENDETTA_PEEK: "Peek at any face-down card",
             GamePhase.VENDETTA_SWAP: "Swap any two cards",
             GamePhase.FINAL_TURN: "Final turn! Draw and decide",
@@ -76,7 +80,7 @@ class GameState:
         self.pending_effect = None
         self.selected_card = None
         
-        # Set the phase to final turn if the player knockec, if not set it to draw. 
+        # Set the phase to final turn if the player knocked, if not set it to draw. 
         self.set_phase(GamePhase.FINAL_TURN if self.knocked_by is not None else GamePhase.DRAW)
         print(f"--- {self.get_current_player_name()}'s Turn ---")
         return True
@@ -107,7 +111,7 @@ class GameState:
         return self.selected_card is not None
 
     def print_state(self):
-        """For debuggin purposes."""
+        """For debugging purposes."""
         print(f"\n=== GAME STATE ===")
         print(f"Phase: {self.phase.name}")
         print(f"Current Player: {self.get_current_player_name()}")

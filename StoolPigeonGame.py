@@ -41,13 +41,20 @@ class StoolPigeonGame:
         # Buttons 
         self.knock_button = Button((50, 575), 100, 50, 'images/knock-button.png')
         self.knock_button_rect = self.knock_button.rect
+        
+        # Done button for card effects
+        self.done_button = Button((750, 575), 100, 50, 'images/knock-button.png')
+        self.done_button_rect = self.done_button.rect
 
         # Game state
         self.state = GameState()
         
+        # Track which card is being peeked at
+        self.peeked_card = None  # Tuple of (player_idx, card_idx)
+        
         self._setup_game()
 
-        if GUI:
+        if self.GUI:
             pygame.init()
             self._initScreen()
             self._load_background()
@@ -86,17 +93,16 @@ class StoolPigeonGame:
         """Redraw the entire game screen. Called every frame."""
         mouse_pos = pygame.mouse.get_pos()
 
-        # Render and display game title at the top
-        # title = self.font.render("STOOL PIGEON", True, self.red_orange)
-        # title_rect = title.get_rect(midtop=(self.screenWidth // 2, 10))
-        # self.screen.blit(title, title_rect)
-
         mouse_pos = pygame.mouse.get_pos()
         is_user_turn = self.state.is_user_turn()
         active_mouse = mouse_pos if is_user_turn else None
 
-        # ========== DRAWN CARD (during DECIDE phase, user only) ==========
-        if self.state.drawn_card and self.state.is_phase(GamePhase.DECIDE) and self.state.is_user_turn():
+        # ========== DRAWN CARD ==========
+        # Show drawn card during DECIDE, STOOL_PIGEON_PEEK, and STOOL_PIGEON_SWAP phases
+        if (self.state.drawn_card and self.state.is_user_turn() and 
+            (self.state.is_phase(GamePhase.DECIDE) or 
+             self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK) or 
+             self.state.is_phase(GamePhase.STOOL_PIGEON_SWAP))):
             drawn_label = self.tinyFont.render("You drew:", True, self.white)
             self.screen.blit(drawn_label, (600, 270))
             self.state.drawn_card.draw(
@@ -161,7 +167,11 @@ class StoolPigeonGame:
             top_card = self.discard_pile[-1]
             top_card.draw(self.screen, (475, 300), self.font, self.tinyFont, active_mouse, face_up=True, is_user_turn=is_user_turn)
             self.discard_pile_rect = top_card.rect
-            top_card.disable()
+            # Enable discard pile during DECIDE phase (for discarding drawn card)
+            if self.state.is_phase(GamePhase.DECIDE):
+                top_card.enable()
+            else:
+                top_card.disable()
         else:
             # Show empty discard pile placeholder (gray rectangle)
             self.discard_pile_rect = pygame.Rect(475, 300, Card.CARD_WIDTH, Card.CARD_HEIGHT)
@@ -173,36 +183,79 @@ class StoolPigeonGame:
         self.screen.blit(hand_label, (350, 420))
         for i, card in enumerate(self.user_hand):
             pos = (375 + i * (Card.CARD_WIDTH + 10), 450) if i < 2 else (375 + (i-2) * (Card.CARD_WIDTH + 10), 550)
-            side = False if i < 2 else True
+            
+            # Check if this card is being peeked at
+            is_peeked = (self.peeked_card == (0, i) and 
+                        self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK))
+            
+            # Normally bottom 2 cards are face-up, top 2 are face-down
+            # But if we're peeking at this card, show it face-up
+            face_up = (i >= 2) or is_peeked
+            
             card.draw(
                 self.screen,
-                pos,  # Position: left to right
+                pos,
                 self.font,
                 self.tinyFont,
                 active_mouse,
-                face_up=side,  # Show card details
+                face_up=face_up,
                 is_user_turn=is_user_turn
             )
-            # TODO: Disable cards and piles when it is the agent's turn
-            card.disable() if i< 2 else card.enable()
+            
+            # Enable/disable based on phase
+            if self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK):
+                # During peek, only enable cards that aren't already being peeked
+                if is_peeked:
+                    card.disable()
+                else:
+                    card.enable()
+            elif self.state.is_phase(GamePhase.STOOL_PIGEON_SWAP):
+                # During swap, enable all cards for swapping
+                card.enable()
+            elif self.state.is_phase(GamePhase.DECIDE):
+                # During decide, enable all cards for potential swapping
+                card.enable()
+            else:
+                # Normal phases - top 2 cards (index 0,1) disabled, bottom 2 enabled
+                card.disable() if i < 2 else card.enable()
         
         # ========== AGENT HAND ==========
         # Display agent's cards face-down at the top
         for i, card in enumerate(self.agent_hands):
             pos = (375 + i * (Card.CARD_WIDTH + 10), 150) if i < 2 else (375 + (i-2) * (Card.CARD_WIDTH + 10), 50)
+            
+            # Check if this card is being peeked at
+            is_peeked = (self.peeked_card == (1, i) and 
+                        self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK))
+            
             card.draw(
                 self.screen,
-                pos,  # Position: left to right
+                pos,
                 self.font,
                 self.tinyFont,
                 active_mouse,
-                face_up=False,  # Hide card details
+                face_up=is_peeked,  # Show face-up only if being peeked
                 is_user_turn=is_user_turn
             )
-            card.disable()
+            
+            # During peek phase, enable agent cards for selection
+            if self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK):
+                if is_peeked:
+                    card.disable()
+                else:
+                    card.enable()
+            else:
+                card.disable()
 
         # ========== KNOCK BUTTON ==========
-        self.knock_button.draw(self.screen, active_mouse)
+        # Only show knock button in normal phases
+        if not self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK) and not self.state.is_phase(GamePhase.STOOL_PIGEON_SWAP):
+            self.knock_button.draw(self.screen, active_mouse)
+        
+        # ========== DONE BUTTON ==========
+        # Show done button during peek phase when a card is selected
+        if self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK) and self.peeked_card is not None:
+            self.done_button.draw(self.screen, active_mouse)
 
         # Update the display with all drawn elements
         pygame.display.flip()
@@ -218,7 +271,6 @@ class StoolPigeonGame:
             else:
                 self.screen.fill((26, 26, 46))
 
-            # self.screen.fill(self.white)  # Clear screen with white background
             self._refresh()  # Redraw all game elements
 
             # Check for user input events
@@ -237,31 +289,61 @@ class StoolPigeonGame:
         if not self.state.is_user_turn():
             return
         
-        # Check if player clicked on the draw pile or discard pile
+        # ========== DRAW PHASE ==========
         if self.state.is_phase(GamePhase.DRAW):
             if self.draw_pile_rect and self.draw_pile_rect.collidepoint(pos):
-                Action.draw_from_pile().execute_action(game, GamePhase)
+                Action.draw_from_pile().execute_action(self, GamePhase)
             elif self.discard_pile_rect and self.discard_pile_rect.collidepoint(pos) and self.discard_pile:
-                Action.draw_from_discard().execute_action(game, GamePhase)
+                Action.draw_from_discard().execute_action(self, GamePhase)
 
-        # Player needs to decide what to do with the card 
+        # ========== DECIDE PHASE ==========
         elif self.state.is_phase(GamePhase.DECIDE):
+            # For normal cards, allow keeping or discarding
             # Click on hand card = swap with drawn card
             for i, card in enumerate(self.user_hand):
                 if card.contains(pos):
-                    Action.keep_card(i).execute_action(game, GamePhase)
+                    Action.keep_card(i).execute_action(self, GamePhase)
                     return
             # Click on discard pile = discard drawn card
             if self.discard_pile_rect and self.discard_pile_rect.collidepoint(pos):
-                Action.discard_drawn().execute_action(game, GamePhase)
+                Action.discard_drawn().execute_action(self, GamePhase)
         
-        # Player knocks
+        # ========== STOOL PIGEON PEEK PHASE ==========
+        elif self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK):
+            # Check if clicked on a user card
+            for i, card in enumerate(self.user_hand):
+                if card.contains(pos):
+                    self.peeked_card = (0, i)  # Player 0, card index i
+                    print(f"Peeking at your card {i}")
+                    return
+            
+            # Check if clicked on an agent card
+            for i, card in enumerate(self.agent_hands):
+                if card.contains(pos):
+                    self.peeked_card = (1, i)  # Player 1 (agent), card index i
+                    print(f"Peeking at agent's card {i}")
+                    return
+            
+            # Check if clicked done button
+            if self.peeked_card and self.done_button.contains(pos):
+                print("Done peeking. Now swap the Stool Pigeon with one of your cards.")
+                self.peeked_card = None
+                self.state.set_phase(GamePhase.STOOL_PIGEON_SWAP)
+        
+        # ========== STOOL PIGEON SWAP PHASE ==========
+        elif self.state.is_phase(GamePhase.STOOL_PIGEON_SWAP):
+            # Click on hand card to swap with drawn Stool Pigeon
+            for i, card in enumerate(self.user_hand):
+                if card.contains(pos):
+                    Action.keep_card(i).execute_action(self, GamePhase)
+                    self.state.pending_effect = None
+                    self.state.next_turn()
+                    return
+        
+        # ========== KNOCK BUTTON ==========
         if self.knock_button.contains(pos) and not self.state.has_knocked():
-            Action.knock().execute_action(game, GamePhase)
-                
-        # TODO: disable knock when it is not the player's turn
-        if self.knock_button.is_clickable() and self.knock_button_rect and self.knock_button_rect.collidepoint(pos):
-             print(f"Knocked.")
+            if not self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK) and not self.state.is_phase(GamePhase.STOOL_PIGEON_SWAP):
+                Action.knock().execute_action(self, GamePhase)
 
     def _create_deck(self):
         """Create a full deck of cards with proper distribution.
@@ -312,5 +394,3 @@ if __name__ == "__main__":
     # Create game instance with GUI enabled and run it
     game = StoolPigeonGame(GUI=True, render_delay_sec=0.1)
     game._main()
-        
-       

@@ -1,4 +1,5 @@
 from enum import Enum, auto
+from cards import CardType
 
 class ActionType(Enum):
     """Types of actions a player can take."""
@@ -61,8 +62,14 @@ class Action:
             game.state.drawn_card = card
             game.state.set_phase(GamePhase.DECIDE)
             print(f"Drew: {card.card_type.name}" + (f" ({card.value})" if card.value else ""))
+            
+            # Check if it's a Stool Pigeon - automatically activate peek
+            if card.card_type == CardType.STOOL_PIGEON:
+                game.state.set_phase(GamePhase.STOOL_PIGEON_PEEK)
+                game.state.pending_effect = CardType.STOOL_PIGEON
+                print("Stool Pigeon effect activated! Click any card to peek at it.")
 
-        # Excute: Keep drawn card 
+        # Execute: Keep drawn card 
         elif self.action_type == ActionType.KEEP_CARD:
             # Swap drawn card with card in hand
             hand = game.get_current_hand()
@@ -82,10 +89,14 @@ class Action:
             card = game.discard_pile.pop()
             game.state.drawn_card = card
             game.state.set_phase(GamePhase.DECIDE)
+            
+            # Check if it's a Stool Pigeon - automatically activate peek
+            if card.card_type == CardType.STOOL_PIGEON:
+                game.state.set_phase(GamePhase.STOOL_PIGEON_PEEK)
+                game.state.pending_effect = CardType.STOOL_PIGEON
+                print("Stool Pigeon effect activated! Click any card to peek at it.")
         
         # Execute: Knock
         elif self.action_type == ActionType.KNOCK:
             game.state.handle_knock()
             game.state.next_turn()
-        
-        
