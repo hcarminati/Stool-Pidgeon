@@ -7,6 +7,7 @@ class GamePhase(Enum):
     RESOLVE_EFFECT = auto()     # Resolving a special card's effect
     STOOL_PIGEON_PEEK = auto()  # Stool Pigeon: peek at any card
     STOOL_PIGEON_SWAP = auto()  # Stool Pigeon: swap drawn card with own card
+    BAMBOOZLE_SELECT = auto()   # Bamboozle: select two face-down cards to swap
     VENDETTA_PEEK = auto()      # Vendetta phase 1: peek at a card
     VENDETTA_SWAP = auto()      # Vendetta phase 2: swap two cards
     FINAL_TURN = auto()         # After someone knocks, others get one last turn
@@ -58,6 +59,7 @@ class GameState:
             GamePhase.RESOLVE_EFFECT: f"Resolve {self.pending_effect.name if self.pending_effect else 'effect'}",
             GamePhase.STOOL_PIGEON_PEEK: "Click any card to peek at it",
             GamePhase.STOOL_PIGEON_SWAP: "Swap the Stool Pigeon with one of your cards",
+            GamePhase.BAMBOOZLE_SELECT: "Click two face-down cards to swap them",
             GamePhase.VENDETTA_PEEK: "Peek at any face-down card",
             GamePhase.VENDETTA_SWAP: "Swap any two cards",
             GamePhase.FINAL_TURN: "Final turn! Draw and decide",

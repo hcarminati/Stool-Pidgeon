@@ -68,6 +68,13 @@ class Action:
                 game.state.set_phase(GamePhase.STOOL_PIGEON_PEEK)
                 game.state.pending_effect = CardType.STOOL_PIGEON
                 print("Stool Pigeon effect activated! Click any card to peek at it.")
+            
+            # Check if it's a Bamboozle - automatically activate swap
+            elif card.card_type == CardType.BAMBOOZLE:
+                game.state.set_phase(GamePhase.BAMBOOZLE_SELECT)
+                game.state.pending_effect = CardType.BAMBOOZLE
+                game.state.clear_selection()  # Reset any previous selection
+                print("Bamboozle effect activated! Click two face-down cards to swap them.")
 
         # Execute: Keep drawn card 
         elif self.action_type == ActionType.KEEP_CARD:
@@ -77,6 +84,9 @@ class Action:
             hand[self.target_idx] = game.state.drawn_card
             game.discard_pile.append(old_card)
             game.state.drawn_card = None
+            
+            # End turn after swapping
+            game.state.next_turn()
         
         # Execute: Discard drawn card
         elif self.action_type == ActionType.DISCARD_DRAWN:
@@ -95,8 +105,36 @@ class Action:
                 game.state.set_phase(GamePhase.STOOL_PIGEON_PEEK)
                 game.state.pending_effect = CardType.STOOL_PIGEON
                 print("Stool Pigeon effect activated! Click any card to peek at it.")
+            
+            # Check if it's a Bamboozle - automatically activate swap
+            elif card.card_type == CardType.BAMBOOZLE:
+                game.state.set_phase(GamePhase.BAMBOOZLE_SELECT)
+                game.state.pending_effect = CardType.BAMBOOZLE
+                game.state.clear_selection()  # Reset any previous selection
+                print("Bamboozle effect activated! Click two face-down cards to swap them.")
         
         # Execute: Knock
         elif self.action_type == ActionType.KNOCK:
             game.state.handle_knock()
+            game.state.next_turn()
+        
+        # Execute: Swap two cards (Bamboozle effect)
+        elif self.action_type == ActionType.SWAP:
+            player1_idx, card1_idx = self.target_player, self.target_idx
+            player2_idx, card2_idx = self.second_target
+            
+            # Get the hands
+            hand1 = game.user_hand if player1_idx == 0 else game.agent_hands
+            hand2 = game.user_hand if player2_idx == 0 else game.agent_hands
+            
+            # Perform the swap
+            hand1[card1_idx], hand2[card2_idx] = hand2[card2_idx], hand1[card1_idx]
+            print(f"Swapped player {player1_idx} card {card1_idx} with player {player2_idx} card {card2_idx}")
+            
+            # Discard the Bamboozle card
+            game.discard_pile.append(game.state.drawn_card)
+            game.state.drawn_card = None
+            game.state.pending_effect = None
+            
+            # End turn
             game.state.next_turn()

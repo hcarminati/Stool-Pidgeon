@@ -43,7 +43,7 @@ class StoolPigeonGame:
         self.knock_button_rect = self.knock_button.rect
         
         # Done button for card effects
-        self.done_button = Button((750, 575), 100, 50, 'images/knock-button.png')
+        self.done_button = Button((750, 575), 100, 50, 'images/done-button.png')
         self.done_button_rect = self.done_button.rect
 
         # Game state
@@ -51,6 +51,9 @@ class StoolPigeonGame:
         
         # Track which card is being peeked at
         self.peeked_card = None  # Tuple of (player_idx, card_idx)
+        
+        # Track first card selection for Bamboozle
+        self.bamboozle_first_card = None  # Tuple of (player_idx, card_idx)
         
         self._setup_game()
 
@@ -98,11 +101,12 @@ class StoolPigeonGame:
         active_mouse = mouse_pos if is_user_turn else None
 
         # ========== DRAWN CARD ==========
-        # Show drawn card during DECIDE, STOOL_PIGEON_PEEK, and STOOL_PIGEON_SWAP phases
+        # Show drawn card during DECIDE, STOOL_PIGEON_PEEK, STOOL_PIGEON_SWAP, and BAMBOOZLE_SELECT phases
         if (self.state.drawn_card and self.state.is_user_turn() and 
             (self.state.is_phase(GamePhase.DECIDE) or 
              self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK) or 
-             self.state.is_phase(GamePhase.STOOL_PIGEON_SWAP))):
+             self.state.is_phase(GamePhase.STOOL_PIGEON_SWAP) or
+             self.state.is_phase(GamePhase.BAMBOOZLE_SELECT))):
             drawn_label = self.tinyFont.render("You drew:", True, self.white)
             self.screen.blit(drawn_label, (600, 270))
             self.state.drawn_card.draw(
@@ -188,6 +192,10 @@ class StoolPigeonGame:
             is_peeked = (self.peeked_card == (0, i) and 
                         self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK))
             
+            # Check if this is the first selected card for Bamboozle
+            is_first_bamboozle = (self.bamboozle_first_card == (0, i) and
+                                 self.state.is_phase(GamePhase.BAMBOOZLE_SELECT))
+            
             # Normally bottom 2 cards are face-up, top 2 are face-down
             # But if we're peeking at this card, show it face-up
             face_up = (i >= 2) or is_peeked
@@ -202,6 +210,10 @@ class StoolPigeonGame:
                 is_user_turn=is_user_turn
             )
             
+            # Highlight first selected card with yellow border
+            if is_first_bamboozle:
+                pygame.draw.rect(self.screen, (255, 255, 0), card.rect, 4)
+            
             # Enable/disable based on phase
             if self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK):
                 # During peek, only enable cards that aren't already being peeked
@@ -212,6 +224,12 @@ class StoolPigeonGame:
             elif self.state.is_phase(GamePhase.STOOL_PIGEON_SWAP):
                 # During swap, enable all cards for swapping
                 card.enable()
+            elif self.state.is_phase(GamePhase.BAMBOOZLE_SELECT):
+                # During bamboozle, only enable face-down cards (top 2)
+                if i < 2:
+                    card.enable()
+                else:
+                    card.disable()
             elif self.state.is_phase(GamePhase.DECIDE):
                 # During decide, enable all cards for potential swapping
                 card.enable()
@@ -228,6 +246,10 @@ class StoolPigeonGame:
             is_peeked = (self.peeked_card == (1, i) and 
                         self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK))
             
+            # Check if this is the first selected card for Bamboozle
+            is_first_bamboozle = (self.bamboozle_first_card == (1, i) and
+                                 self.state.is_phase(GamePhase.BAMBOOZLE_SELECT))
+            
             card.draw(
                 self.screen,
                 pos,
@@ -238,18 +260,27 @@ class StoolPigeonGame:
                 is_user_turn=is_user_turn
             )
             
+            # Highlight first selected card with yellow border
+            if is_first_bamboozle:
+                pygame.draw.rect(self.screen, (255, 255, 0), card.rect, 4)
+            
             # During peek phase, enable agent cards for selection
             if self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK):
                 if is_peeked:
                     card.disable()
                 else:
                     card.enable()
+            elif self.state.is_phase(GamePhase.BAMBOOZLE_SELECT):
+                # During bamboozle, enable all agent cards (they're all face-down)
+                card.enable()
             else:
                 card.disable()
 
         # ========== KNOCK BUTTON ==========
         # Only show knock button in normal phases
-        if not self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK) and not self.state.is_phase(GamePhase.STOOL_PIGEON_SWAP):
+        if (not self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK) and 
+            not self.state.is_phase(GamePhase.STOOL_PIGEON_SWAP) and
+            not self.state.is_phase(GamePhase.BAMBOOZLE_SELECT)):
             self.knock_button.draw(self.screen, active_mouse)
         
         # ========== DONE BUTTON ==========
@@ -337,12 +368,43 @@ class StoolPigeonGame:
                 if card.contains(pos):
                     Action.keep_card(i).execute_action(self, GamePhase)
                     self.state.pending_effect = None
-                    self.state.next_turn()
+                    return
+        
+        # ========== BAMBOOZLE SELECT PHASE ==========
+        elif self.state.is_phase(GamePhase.BAMBOOZLE_SELECT):
+            # Check if clicked on a user card (only face-down cards, indices 0-1)
+            for i, card in enumerate(self.user_hand):
+                if card.contains(pos):
+                    if self.bamboozle_first_card is None:
+                        # First card selection
+                        self.bamboozle_first_card = (0, i)
+                        print(f"Selected first card: Your card {i}")
+                    else:
+                        # Second card selection - execute swap
+                        player1_idx, card1_idx = self.bamboozle_first_card
+                        Action.swap(player1_idx, card1_idx, 0, i).execute_action(self, GamePhase)
+                        self.bamboozle_first_card = None
+                    return
+            
+            # Check if clicked on an agent card
+            for i, card in enumerate(self.agent_hands):
+                if card.contains(pos):
+                    if self.bamboozle_first_card is None:
+                        # First card selection
+                        self.bamboozle_first_card = (1, i)
+                        print(f"Selected first card: Agent's card {i}")
+                    else:
+                        # Second card selection - execute swap
+                        player1_idx, card1_idx = self.bamboozle_first_card
+                        Action.swap(player1_idx, card1_idx, 1, i).execute_action(self, GamePhase)
+                        self.bamboozle_first_card = None
                     return
         
         # ========== KNOCK BUTTON ==========
         if self.knock_button.contains(pos) and not self.state.has_knocked():
-            if not self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK) and not self.state.is_phase(GamePhase.STOOL_PIGEON_SWAP):
+            if (not self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK) and 
+                not self.state.is_phase(GamePhase.STOOL_PIGEON_SWAP) and
+                not self.state.is_phase(GamePhase.BAMBOOZLE_SELECT)):
                 Action.knock().execute_action(self, GamePhase)
 
     def _create_deck(self):
