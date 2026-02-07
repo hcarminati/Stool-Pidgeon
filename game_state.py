@@ -2,13 +2,19 @@ from enum import Enum, auto
 
 class GamePhase(Enum):
     """Represents the current phase of the game."""
-    DRAW = auto()           # Player must draw from draw pile or discard pile
-    DECIDE = auto()         # Player decides: keep drawn card or discard it
-    RESOLVE_EFFECT = auto() # Resolving a special card's effect
-    VENDETTA_PEEK = auto()  # Vendetta phase 1: peek at a card
-    VENDETTA_SWAP = auto()  # Vendetta phase 2: swap two cards
-    FINAL_TURN = auto()     # After someone knocks, others get one last turn
-    GAME_OVER = auto()      # Game has ended, show scores
+    DRAW = auto()               # Player must draw from draw pile or discard pile
+    DECIDE = auto()             # Player decides: keep drawn card or discard it
+    RESOLVE_EFFECT = auto()     # Resolving a special card's effect
+    STOOL_PIGEON_PEEK = auto()  # Stool Pigeon: peek at any card
+    STOOL_PIGEON_SWAP = auto()  # Stool Pigeon: swap drawn card with own card
+    BAMBOOZLE_SELECT = auto()   # Bamboozle: select two face-down cards to swap
+    VENDETTA_PEEK = auto()      # Vendetta phase 1: peek at a card
+    VENDETTA_SWAP = auto()      # Vendetta phase 2: swap two cards
+    KINGPIN_CHOOSE = auto()     # Kingpin: choose eliminate or add
+    KINGPIN_ELIMINATE = auto()  # Kingpin: select card to eliminate
+    KINGPIN_ADD = auto()        # Kingpin: select opponent to give card to
+    FINAL_TURN = auto()         # After someone knocks, others get one last turn
+    GAME_OVER = auto()          # Game has ended, show scores
 
 class GameState:
     """Holds all game state variables and state-related logic."""
@@ -26,26 +32,30 @@ class GameState:
         """Reset all state to initial values."""
         self.__init__()
     
+    # ========== PLAYER INFO ==========
+    
     def get_current_player_name(self):
         """Returns the current player name."""
         return "User" if self.current_player_idx == 0 else "Agent"
     
     def is_user_turn(self):
-        """Returns true if the current player index is 0, false otherwise."""
+        """Returns true if it's the user's turn."""
         return self.current_player_idx == 0
     
     def is_agent_turn(self):
-        """Returns true if the current player index is 1, false otherwise."""
+        """Returns true if it's the agent's turn."""
         return self.current_player_idx == 1
 
+    # ========== PHASE MANAGEMENT ==========
+    
     def set_phase(self, new_phase):
-        """Sets the current phase to the new passed in phase."""
+        """Sets the current phase."""
         old_phase = self.phase
         self.phase = new_phase
         print(f"Phase: {old_phase.name} -> {new_phase.name}")
     
     def is_phase(self, phase):
-        """Returns true if it is the passed in phase, false otherwise."""
+        """Returns true if current phase matches the given phase."""
         return self.phase == phase
 
     def get_phase_instructions(self):
@@ -54,13 +64,21 @@ class GameState:
             GamePhase.DRAW: "Draw a card from the draw pile or discard pile",
             GamePhase.DECIDE: "Keep the card (swap with one of yours) or discard it",
             GamePhase.RESOLVE_EFFECT: f"Resolve {self.pending_effect.name if self.pending_effect else 'effect'}",
-            GamePhase.VENDETTA_PEEK: "Peek at any face-down card",
-            GamePhase.VENDETTA_SWAP: "Swap any two cards",
+            GamePhase.STOOL_PIGEON_PEEK: "Click any card to peek at it",
+            GamePhase.STOOL_PIGEON_SWAP: "Swap the Stool Pigeon with one of your cards",
+            GamePhase.BAMBOOZLE_SELECT: "Click two face-down cards to swap them",
+            GamePhase.VENDETTA_PEEK: "Vendetta: Click any card to peek at it",
+            GamePhase.VENDETTA_SWAP: "Vendetta: Click two cards to swap them",
+            GamePhase.KINGPIN_CHOOSE: "Kingpin: Choose to Eliminate a card or Add card to opponent",
+            GamePhase.KINGPIN_ELIMINATE: "Kingpin: Click one of your cards to eliminate it",
+            GamePhase.KINGPIN_ADD: "Kingpin: Click an opponent card slot to add a card",
             GamePhase.FINAL_TURN: "Final turn! Draw and decide",
             GamePhase.GAME_OVER: "Game Over!",
         }
         return instructions.get(self.phase, "")
 
+    # ========== TURN MANAGEMENT ==========
+    
     def next_turn(self):
         """Advance to the next player's turn. Returns True if game continues."""
         if self.knocked_by is not None:
@@ -76,11 +94,13 @@ class GameState:
         self.pending_effect = None
         self.selected_card = None
         
-        # Set the phase to final turn if the player knockec, if not set it to draw. 
+        # Set the phase to final turn if the player knocked, if not set it to draw. 
         self.set_phase(GamePhase.FINAL_TURN if self.knocked_by is not None else GamePhase.DRAW)
         print(f"--- {self.get_current_player_name()}'s Turn ---")
         return True
 
+    # ========== KNOCK MANAGEMENT ==========
+    
     def handle_knock(self):
         """Handle when a player knocks. Returns True if knock was valid."""
         if self.knocked_by is None and self.phase != GamePhase.GAME_OVER:
@@ -93,6 +113,8 @@ class GameState:
         """Returns true if a player knocked, false otherwise."""
         return self.knocked_by is not None
 
+    # ========== CARD SELECTION ==========
+    
     def select_card(self, player_idx, card_idx):
         """Sets the selected card and player who selected it."""
         self.selected_card = (player_idx, card_idx)
@@ -106,8 +128,10 @@ class GameState:
         """Returns true if there is a selected card, false otherwise."""
         return self.selected_card is not None
 
+    # ========== DEBUG ==========
+    
     def print_state(self):
-        """For debuggin purposes."""
+        """For debugging purposes."""
         print(f"\n=== GAME STATE ===")
         print(f"Phase: {self.phase.name}")
         print(f"Current Player: {self.get_current_player_name()}")

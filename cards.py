@@ -16,26 +16,6 @@ class Card:
     CARD_WIDTH = 65
     CARD_HEIGHT = 90
 
-    # Display names for special cards (split across multiple lines)
-    CARD_NAMES = {
-        CardType.STOOL_PIGEON: "STOOL\nPIGEON",
-        CardType.BAMBOOZLE: "BAM-\nBOOZLE",
-        CardType.VENDETTA: "VEN-\nDETTA",
-        CardType.KINGPIN: "KING-\nPIN",
-        CardType.RAT: "RAT",
-        CardType.MEATBALL: "MEAT-\nBALL"
-    }
-    
-    # Short descriptions shown on cards
-    CARD_DESCRIPTIONS = {
-        CardType.STOOL_PIGEON: "Peek 1",
-        CardType.BAMBOOZLE: "Swap 2",
-        CardType.VENDETTA: "Peek+Swap",
-        CardType.KINGPIN: "Elim/Add",
-        CardType.RAT: "Sticky",
-        CardType.MEATBALL: "= 0"
-    }
-
     IMAGE_FILES = {
         CardType.STOOL_PIGEON: "images/stool_pigeon.png",
         CardType.BAMBOOZLE: "images/bamboozle.png",
@@ -87,7 +67,7 @@ class Card:
         """Check if a position (e.g., mouse click) is inside the card."""
         return self.is_clickable and self.rect.collidepoint(pos)
     
-    def draw(self, screen, position, font, small_font, mouse_pos=None, face_up=None):
+    def draw(self, screen, position, font, small_font, mouse_pos=None, face_up=None, is_user_turn=None):
         """
         Draw this card on the screen at the given position.
         """
@@ -99,11 +79,11 @@ class Card:
         show_face = face_up if face_up is not None else self.face_up
 
         if show_face:
-            self._draw_card_face(screen, card_color, position, mouse_pos)
+            self._draw_card_face(screen, card_color, position, mouse_pos, is_user_turn)
         else:
-            self._draw_face_down(screen, position, mouse_pos)
+            self._draw_face_down(screen, position, mouse_pos, is_user_turn)
 
-    def _draw_card_face(self, screen, card_color, position, mouse_pos=None):
+    def _draw_card_face(self, screen, card_color, position, mouse_pos=None, is_user_turn=None):
         """Draw the front of the card showing its details (color, name, value, description)."""
         image = self.get_image_file()
         if image:
@@ -119,10 +99,10 @@ class Card:
             pygame.draw.rect(screen, card_color, self.rect)
     
         # Hover effect: brighten color if mouse is over this card
-        if self.clickable and mouse_pos and self.rect.collidepoint(mouse_pos):
+        if is_user_turn and self.clickable and mouse_pos and self.rect.collidepoint(mouse_pos):
             pygame.draw.rect(screen, (255, 255, 255), self.rect, 3)
             
-    def _draw_face_down(self, screen, position, mouse_pos):
+    def _draw_face_down(self, screen, position, mouse_pos, is_user_turn):
         """Draw the back of the card (generic purple/blue design for hidden cards)."""
         try:
             cardback_image = pygame.image.load("images/cardback.png")
@@ -133,5 +113,5 @@ class Card:
             pygame.draw.rect(screen, (80, 50, 100), self.rect, 2)
 
         # Hover highlight: show white border if mouse is over this card
-        if self.clickable and mouse_pos and self.rect.collidepoint(mouse_pos):
+        if is_user_turn and self.clickable and mouse_pos and self.rect.collidepoint(mouse_pos):
             pygame.draw.rect(screen, (255, 255, 255), self.rect, 3)
