@@ -71,4 +71,10 @@ class Action:
             game.discard_pile.append(old_card)
             game.state.drawn_card = None
         
+        # Execute: Draw from discard pile
+        elif self.action_type == ActionType.DISCARD_DRAWN:
+            game.discard_pile.append(game.state.drawn_card)
+            game.state.drawn_card = None
+            game.state.next_turn()
+        
         

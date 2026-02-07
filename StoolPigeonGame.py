@@ -242,6 +242,9 @@ class StoolPigeonGame:
                 if card.contains(pos):
                     Action.keep_card(i).execute_action(game, GamePhase)
                     return
+            # Click on discard pile = discard drawn card
+            if self.discard_pile_rect and self.discard_pile_rect.collidepoint(pos):
+                Action.discard_drawn().execute_action(game, GamePhase)
                 
         # TODO: disable knock when it is not the player's turn
         if self.knock_button.is_clickable() and self.knock_button_rect and self.knock_button_rect.collidepoint(pos):
