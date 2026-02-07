@@ -77,4 +77,9 @@ class Action:
             game.state.drawn_card = None
             game.state.next_turn()
         
+         # Execute: Knock
+        elif self.action_type == ActionType.KNOCK:
+            game.state.handle_knock()
+            game.state.next_turn()
+        
         
