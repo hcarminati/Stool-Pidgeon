@@ -347,6 +347,14 @@ class StoolPigeonGame:
         if not self.state.is_user_turn():
             return
         
+        # Handle FINAL_TURN based on whether we've drawn yet
+        if self.state.phase == GamePhase.FINAL_TURN:
+            if self.state.drawn_card is None:
+                self._handle_draw_phase_click(pos)
+            else:
+                self._handle_decide_phase_click(pos)
+            return
+        
         # Route to phase-specific handler
         phase_handlers = {
             GamePhase.DRAW: self._handle_draw_phase_click,
