@@ -4,7 +4,6 @@ class GamePhase(Enum):
     """Represents the current phase of the game."""
     DRAW = auto()               # Player must draw from draw pile or discard pile
     DECIDE = auto()             # Player decides: keep drawn card or discard it
-    RESOLVE_EFFECT = auto()     # Resolving a special card's effect
     STOOL_PIGEON_PEEK = auto()  # Stool Pigeon: peek at any card
     STOOL_PIGEON_SWAP = auto()  # Stool Pigeon: swap drawn card with own card
     BAMBOOZLE_SELECT = auto()   # Bamboozle: select two face-down cards to swap
@@ -63,7 +62,6 @@ class GameState:
         instructions = {
             GamePhase.DRAW: "Draw a card from the draw pile or discard pile",
             GamePhase.DECIDE: "Keep the card (swap with one of yours) or discard it",
-            GamePhase.RESOLVE_EFFECT: f"Resolve {self.pending_effect.name if self.pending_effect else 'effect'}",
             GamePhase.STOOL_PIGEON_PEEK: "Click any card to peek at it",
             GamePhase.STOOL_PIGEON_SWAP: "Swap the Stool Pigeon with one of your cards",
             GamePhase.BAMBOOZLE_SELECT: "Click two face-down cards to swap them",

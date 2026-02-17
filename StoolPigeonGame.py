@@ -516,21 +516,29 @@ class StoolPigeonGame:
         if self.state.phase == GamePhase.DRAW:
             action = self.agent.choose_action()
             print(f"Agent draws: {action.action_type.name}")
-            action.execute_action(self, GamePhase)
+            action.execute_action(self, GamePhase, agent=True)
             
             if self.GUI:
                 self._refresh()
                 time.sleep(self.agent_delay)
         
-        # Handle decide phase (after drawing)
-        if self.state.phase == GamePhase.DECIDE and self.state.is_agent_turn():
+        # Handle decision/effect phases
+        while self.state.is_agent_turn() and self.state.phase != GamePhase.GAME_OVER:
+            if self.state.phase == GamePhase.DRAW:
+                break  # Will be handled next iteration
+            
             action = self.agent.choose_action()
-            print(f"Agent decides: {action.action_type.name}")
-            action.execute_action(self, GamePhase)
+            print(f"Agent action: {action.action_type.name}")
+            action.execute_action(self, GamePhase, agent=True)
             
             if self.GUI:
                 self._refresh()
-    
+                time.sleep(self.agent_delay)
+            
+            # Break if turn ended (next_turn was called)
+            if self.state.is_user_turn() or self.state.phase == GamePhase.GAME_OVER:
+                break
+
     # ========== GAME SETUP ==========
 
     def _create_deck(self):
@@ -543,11 +551,11 @@ class StoolPigeonGame:
                 deck.append(Card(CardType.NUMBERED, value))
         
         # Add action cards, 4 of each
-        for _ in range(4):
+        for _ in range(40):
             deck.append(Card(CardType.STOOL_PIGEON))
-            deck.append(Card(CardType.BAMBOOZLE))
-            deck.append(Card(CardType.VENDETTA))
-            deck.append(Card(CardType.KINGPIN))
+            # deck.append(Card(CardType.BAMBOOZLE))
+            # deck.append(Card(CardType.VENDETTA))
+            # deck.append(Card(CardType.KINGPIN))
 
         # Add special cards, 2 of each
         for _ in range(2):

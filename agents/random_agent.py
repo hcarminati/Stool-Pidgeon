@@ -17,12 +17,13 @@ class RandomAgent:
             return self._choose_draw_action()
         elif phase == GamePhase.DECIDE:
             return self._choose_decide_action()
+        elif phase == GamePhase.STOOL_PIGEON_PEEK:
+            return self._choose_peek_action()
         
         # TODO: Add other phases later
         else:
-            # Fallback: just discard if we have a drawn card
-            print(f"WARNING: Unhandled phase {phase}, discarding")
-            return Action.discard_drawn()
+            # Default: try to draw
+            return Action.draw_from_pile()
         
     
     def _choose_draw_action(self) -> Action:
@@ -51,3 +52,25 @@ class RandomAgent:
                 actions.append(Action.knock())
         
         return random.choice(actions)
+    
+    def _choose_peek_action(self) -> Action:
+        """Choose a card to peek at (Stool Pigeon or Vendetta)."""
+        options = []
+        
+        # Can peek at own cards (positions 0-3)
+        for i, card in enumerate(self.game.agent_hands):
+            if card is not None:
+                options.append((self.player_idx, i))
+        
+        # Can peek at opponent cards
+        opp_idx = 1 - self.player_idx
+        for i, card in enumerate(self.game.user_hand):
+            if card is not None:
+                options.append((opp_idx, i))
+        
+        if options:
+            player, idx = random.choice(options)
+            return Action.peek(player, idx)
+        
+        # Fallback
+        return Action.peek(self.player_idx, 0)

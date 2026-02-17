@@ -56,21 +56,23 @@ class Action:
     
     # ========== EXECUTION METHODS ==========
     
-    def execute_action(self, game, GamePhase):
+    def execute_action(self, game, GamePhase, agent=False):
         """Execute an action and update game state."""
         print(f"Executing: {self.action_type}")
         
         # Route to appropriate handler
         if self.action_type == ActionType.DRAW_FROM_PILE:
-            self._execute_draw_from_pile(game, GamePhase)
+            self._execute_draw_from_pile(game, GamePhase, agent)
         elif self.action_type == ActionType.DRAW_FROM_DISCARD:
-            self._execute_draw_from_discard(game, GamePhase)
+            self._execute_draw_from_discard(game, GamePhase, agent)
         elif self.action_type == ActionType.KEEP_CARD:
             self._execute_keep_card(game, GamePhase)
         elif self.action_type == ActionType.DISCARD_DRAWN:
             self._execute_discard_drawn(game, GamePhase)
         elif self.action_type == ActionType.KNOCK:
             self._execute_knock(game, GamePhase)
+        elif self.action_type == ActionType.PEEK:    
+            self._execute_peek(game, GamePhase, agent) 
         elif self.action_type == ActionType.SWAP:
             self._execute_swap(game, GamePhase)
         elif self.action_type == ActionType.KINGPIN_ELIMINATE:
@@ -78,29 +80,34 @@ class Action:
         elif self.action_type == ActionType.KINGPIN_ADD:
             self._execute_kingpin_add(game, GamePhase)
     
-    def _execute_draw_from_pile(self, game, GamePhase):
+    def _execute_draw_from_pile(self, game, GamePhase, agent=False):
         """Draw a card from the draw pile."""
         card = game.draw_pile.pop()
         game.state.drawn_card = card
         game.state.set_phase(GamePhase.DECIDE)
         print(f"Drew: {card.card_type.name}" + (f" ({card.value})" if card.value else ""))
         
-        self._activate_special_card_effect(game, GamePhase, card)
-    
-    def _execute_draw_from_discard(self, game, GamePhase):
+        self._activate_special_card_effect(game, GamePhase, card, agent)  # <-- Pass agent
+
+    def _execute_draw_from_discard(self, game, GamePhase, agent=False):
         """Draw a card from the discard pile."""
         card = game.discard_pile.pop()
         game.state.drawn_card = card
         game.state.set_phase(GamePhase.DECIDE)
         
-        self._activate_special_card_effect(game, GamePhase, card)
-    
-    def _activate_special_card_effect(self, game, GamePhase, card):
+        self._activate_special_card_effect(game, GamePhase, card, agent) 
+
+    def _activate_special_card_effect(self, game, GamePhase, card, agent=False):
         """Activate special effects for action cards."""
         if card.card_type == CardType.STOOL_PIGEON:
-            game.state.set_phase(GamePhase.STOOL_PIGEON_PEEK)
             game.state.pending_effect = CardType.STOOL_PIGEON
-            print("Stool Pigeon effect activated! Click any card to peek at it.")
+            if agent:
+                # Agent skips peek, goes straight to swap
+                game.state.set_phase(GamePhase.STOOL_PIGEON_SWAP)
+                print("Stool Pigeon: Agent skips peek, ready to swap.")
+            else:
+                game.state.set_phase(GamePhase.STOOL_PIGEON_PEEK)
+                print("Stool Pigeon effect activated! Click any card to peek at it.")
         
         elif card.card_type == CardType.BAMBOOZLE:
             game.state.set_phase(GamePhase.BAMBOOZLE_SELECT)
@@ -109,15 +116,20 @@ class Action:
             print("Bamboozle effect activated! Click two face-down cards to swap them.")
         
         elif card.card_type == CardType.VENDETTA:
-            game.state.set_phase(GamePhase.VENDETTA_PEEK)
             game.state.pending_effect = CardType.VENDETTA
-            print("Vendetta effect activated! Peek at one card, then swap any two.")
+            if agent:
+                # Agent skips peek, goes straight to swap
+                game.state.set_phase(GamePhase.VENDETTA_SWAP)
+                print("Vendetta: Agent skips peek, ready to swap.")
+            else:
+                game.state.set_phase(GamePhase.VENDETTA_PEEK)
+                print("Vendetta effect activated! Peek at one card, then swap any two.")
         
         elif card.card_type == CardType.KINGPIN:
             game.state.set_phase(GamePhase.KINGPIN_CHOOSE)
             game.state.pending_effect = CardType.KINGPIN
             print("Kingpin effect activated! Choose: Eliminate a card OR Add card to opponent.")
-    
+            
     def _execute_keep_card(self, game, GamePhase):
         """Keep the drawn card by swapping it with a card in hand."""
         hand = game.get_current_hand()
@@ -221,3 +233,22 @@ class Action:
         game.state.drawn_card = None
         game.state.pending_effect = None
         game.state.next_turn()
+
+    def _execute_peek(self, game, GamePhase, agent=False):
+        """
+        Execute peek action (Stool Pigeon / Vendetta).
+        
+        For humans: Sets peeked_card so UI shows it, waits for "done" button
+        For agents: Sets peeked_card and immediately advances to next phase
+        """
+        game.peeked_card = (self.target_player, self.target_idx)
+        print(f"Peeked at player {self.target_player}, card {self.target_idx}")
+        
+        if agent:
+            # Agent doesn't need to wait for UI - advance to next phase
+            game.peeked_card = None
+            if game.state.phase == GamePhase.STOOL_PIGEON_PEEK:
+                game.state.set_phase(GamePhase.STOOL_PIGEON_SWAP)
+            elif game.state.phase == GamePhase.VENDETTA_PEEK:
+                game.state.set_phase(GamePhase.VENDETTA_SWAP)
+        # For humans, phase stays the same - they click "done" button to advance
