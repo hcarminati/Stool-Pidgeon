@@ -16,6 +16,8 @@ class ActionType(Enum):
     KINGPIN_ELIMINATE = auto()  # Kingpin: remove own card
     KINGPIN_ADD = auto()        # Kingpin: add card to opponent
 
+    DONE_PEEKING = auto()       # For the agent
+
 class Action: 
     """Represents a player action with optional targets."""
     
@@ -53,6 +55,9 @@ class Action:
     
     def kingpin_add(opponent_idx, card_idx):
         return Action(ActionType.KINGPIN_ADD, target_player=opponent_idx, target_idx=card_idx)
+
+    def done_peeking():
+        return Action(ActionType.DONE_PEEKING)
     
     # ========== EXECUTION METHODS ==========
     
@@ -79,6 +84,8 @@ class Action:
             self._execute_kingpin_eliminate(game, GamePhase)
         elif self.action_type == ActionType.KINGPIN_ADD:
             self._execute_kingpin_add(game, GamePhase)
+        elif self.action_type == ActionType.DONE_PEEKING:
+            self._execute_done_peeking(game, GamePhase)
     
     def _execute_draw_from_pile(self, game, GamePhase, agent=False):
         """Draw a card from the draw pile."""
@@ -163,7 +170,7 @@ class Action:
     def _execute_knock(self, game, GamePhase):
         """Execute knock action."""
         game.state.handle_knock()
-        game.state.next_turn()
+        # game.state.next_turn()
     
     def _execute_swap(self, game, GamePhase):
         """Swap two cards (Bamboozle/Vendetta effect)."""
@@ -252,3 +259,14 @@ class Action:
             elif game.state.phase == GamePhase.VENDETTA_PEEK:
                 game.state.set_phase(GamePhase.VENDETTA_SWAP)
         # For humans, phase stays the same - they click "done" button to advance
+    
+    def _execute_done_peeking(self, game, GamePhase):
+        """Finish peeking phase and move to next phase."""
+        game.peeked_card = None
+        
+        if game.state.phase == GamePhase.VENDETTA_PEEK:
+            game.state.set_phase(GamePhase.VENDETTA_SWAP)
+            print("Done peeking. Now swap any two cards.")
+        elif game.state.phase == GamePhase.STOOL_PIGEON_PEEK:
+            game.state.set_phase(GamePhase.STOOL_PIGEON_SWAP)
+            print("Done peeking. Now swap the Stool Pigeon with one of your cards.")

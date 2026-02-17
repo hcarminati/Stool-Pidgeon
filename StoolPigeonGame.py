@@ -523,25 +523,32 @@ class StoolPigeonGame:
                 actions.append(Action.draw_from_discard())
         
         elif self.state.phase in [GamePhase.DECIDE, GamePhase.FINAL_TURN]:
-            # Can swap drawn card with any non-RAT card in hand
-            for i, card in enumerate(self.get_current_hand()):
-                if card is not None and card.card_type != CardType.RAT:
-                    actions.append(Action.keep_card(i))
-            # Can discard drawn card
-            actions.append(Action.discard_drawn())
-            # Can knock (only in DECIDE phase)
-            if self.state.phase == GamePhase.DECIDE and not self.state.has_knocked():
-                actions.append(Action.knock())
+            # Must draw first if no drawn card yet
+            if self.state.drawn_card is None:
+                actions.append(Action.draw_from_pile())
+                if self.discard_pile:
+                    actions.append(Action.draw_from_discard())
+            else:
+                # Can swap drawn card with any non-RAT card in hand
+                for i, card in enumerate(self.get_current_hand()):
+                    if card is not None and card.card_type != CardType.RAT:
+                        actions.append(Action.keep_card(i))
+                # Can discard drawn card
+                actions.append(Action.discard_drawn())
+                # Can knock (only in DECIDE phase)
+                if self.state.phase == GamePhase.DECIDE and not self.state.has_knocked():
+                    actions.append(Action.knock())
         
         elif self.state.phase == GamePhase.STOOL_PIGEON_PEEK:
-            # Can peek at any card (own or opponent's)
             for i, card in enumerate(self.get_current_hand()):
                 if card is not None:
                     actions.append(Action.peek(current_player, i))
             for i, card in enumerate(self.get_opponent_hand()):
                 if card is not None:
                     actions.append(Action.peek(opponent, i))
-        
+            # ADD THIS: Can finish peeking
+            actions.append(Action.done_peeking())
+            
         elif self.state.phase == GamePhase.STOOL_PIGEON_SWAP:
             # Must swap Stool Pigeon into hand (or discard)
             for i, card in enumerate(self.get_current_hand()):
@@ -573,6 +580,7 @@ class StoolPigeonGame:
             for i, card in enumerate(self.get_opponent_hand()):
                 if card is not None:
                     actions.append(Action.peek(opponent, i))
+            actions.append(Action.done_peeking())
         
         elif self.state.phase == GamePhase.VENDETTA_SWAP:
             # Can swap any two cards
