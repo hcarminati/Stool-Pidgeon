@@ -11,7 +11,7 @@ class ActionType(Enum):
     KNOCK = auto()
     
     # Special card effects
-    PEEK = auto()               # Stool Pigeon: peek at any card
+    PEEK = auto()               # Stool Pigeon/Vendetta: peek at any card
     SWAP = auto()               # Bamboozle/Vendetta: swap two cards
     KINGPIN_ELIMINATE = auto()  # Kingpin: remove own card
     KINGPIN_ADD = auto()        # Kingpin: add card to opponent

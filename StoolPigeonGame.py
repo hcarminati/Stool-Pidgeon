@@ -499,46 +499,122 @@ class StoolPigeonGame:
     # ========== HANDLE AGENT ==========
     def _handle_agent_turn(self):
         """Let the agent take its turn."""
-        if self.agent is None:
+        if self.agent is None or not self.state.is_agent_turn():
             return
         
-        if not self.state.is_agent_turn():
-            return
-        
-        if self.state.phase == GamePhase.GAME_OVER:
-            return
-        
-        # Add slight delay so human can see what's happening
-        if self.GUI:
-            time.sleep(self.agent_delay)
-        
-        # Handle draw phase first
-        if self.state.phase == GamePhase.DRAW:
-            action = self.agent.choose_action()
-            print(f"Agent draws: {action.action_type.name}")
-            action.execute_action(self, GamePhase, agent=True)
-            
-            if self.GUI:
-                self._refresh()
-                time.sleep(self.agent_delay)
-        
-        # Handle decision/effect phases
         while self.state.is_agent_turn() and self.state.phase != GamePhase.GAME_OVER:
-            if self.state.phase == GamePhase.DRAW:
-                break  # Will be handled next iteration
-            
             action = self.agent.choose_action()
-            print(f"Agent action: {action.action_type.name}")
-            action.execute_action(self, GamePhase, agent=True)
+            print(f"Agent: {action.action_type.name}")
+            action.execute_action(self, GamePhase)
             
             if self.GUI:
                 self._refresh()
                 time.sleep(self.agent_delay)
-            
-            # Break if turn ended (next_turn was called)
-            if self.state.is_user_turn() or self.state.phase == GamePhase.GAME_OVER:
-                break
 
+    def get_legal_actions(self):
+        """Return list of all legal Action objects for current player."""
+        actions = []
+        current_player = 0 if self.state.is_user_turn() else 1
+        opponent = 1 - current_player
+        
+        if self.state.phase == GamePhase.DRAW:
+            actions.append(Action.draw_from_pile())
+            if self.discard_pile:
+                actions.append(Action.draw_from_discard())
+        
+        elif self.state.phase in [GamePhase.DECIDE, GamePhase.FINAL_TURN]:
+            # Can swap drawn card with any non-RAT card in hand
+            for i, card in enumerate(self.get_current_hand()):
+                if card is not None and card.card_type != CardType.RAT:
+                    actions.append(Action.keep_card(i))
+            # Can discard drawn card
+            actions.append(Action.discard_drawn())
+            # Can knock (only in DECIDE phase)
+            if self.state.phase == GamePhase.DECIDE and not self.state.has_knocked():
+                actions.append(Action.knock())
+        
+        elif self.state.phase == GamePhase.STOOL_PIGEON_PEEK:
+            # Can peek at any card (own or opponent's)
+            for i, card in enumerate(self.get_current_hand()):
+                if card is not None:
+                    actions.append(Action.peek(current_player, i))
+            for i, card in enumerate(self.get_opponent_hand()):
+                if card is not None:
+                    actions.append(Action.peek(opponent, i))
+        
+        elif self.state.phase == GamePhase.STOOL_PIGEON_SWAP:
+            # Must swap Stool Pigeon into hand (or discard)
+            for i, card in enumerate(self.get_current_hand()):
+                if card is not None and card.card_type != CardType.RAT:
+                    actions.append(Action.keep_card(i))
+            actions.append(Action.discard_drawn())
+        
+        elif self.state.phase == GamePhase.BAMBOOZLE_SELECT:
+            # Can swap any two cards on the table
+            all_positions = []
+            for i, card in enumerate(self.get_current_hand()):
+                if card is not None:
+                    all_positions.append((current_player, i))
+            for i, card in enumerate(self.get_opponent_hand()):
+                if card is not None:
+                    all_positions.append((opponent, i))
+            # Generate all possible pairs
+            for idx, (p1, c1) in enumerate(all_positions):
+                for p2, c2 in all_positions[idx+1:]:
+                    actions.append(Action.swap(p1, c1, p2, c2))
+            # Can skip (just discard the Bamboozle)
+            actions.append(Action.discard_drawn())
+        
+        elif self.state.phase == GamePhase.VENDETTA_PEEK:
+            # Can peek at any card
+            for i, card in enumerate(self.get_current_hand()):
+                if card is not None:
+                    actions.append(Action.peek(current_player, i))
+            for i, card in enumerate(self.get_opponent_hand()):
+                if card is not None:
+                    actions.append(Action.peek(opponent, i))
+        
+        elif self.state.phase == GamePhase.VENDETTA_SWAP:
+            # Can swap any two cards
+            all_positions = []
+            for i, card in enumerate(self.get_current_hand()):
+                if card is not None:
+                    all_positions.append((current_player, i))
+            for i, card in enumerate(self.get_opponent_hand()):
+                if card is not None:
+                    all_positions.append((opponent, i))
+            for idx, (p1, c1) in enumerate(all_positions):
+                for p2, c2 in all_positions[idx+1:]:
+                    actions.append(Action.swap(p1, c1, p2, c2))
+            # Can skip
+            actions.append(Action.discard_drawn())
+        
+        elif self.state.phase == GamePhase.KINGPIN_CHOOSE:
+            # Can eliminate any of own cards
+            for i, card in enumerate(self.get_current_hand()):
+                if card is not None:
+                    actions.append(Action.kingpin_eliminate(i))
+            # Can add card to opponent
+            if self.draw_pile:
+                actions.append(Action.kingpin_add(opponent, 0))
+        
+        elif self.state.phase == GamePhase.KINGPIN_ELIMINATE:
+            for i, card in enumerate(self.get_current_hand()):
+                if card is not None:
+                    actions.append(Action.kingpin_eliminate(i))
+        
+        elif self.state.phase == GamePhase.KINGPIN_ADD:
+            if self.draw_pile:
+                actions.append(Action.kingpin_add(opponent, 0))
+        
+        # Debug
+        if not actions:
+            print(f"WARNING: No legal actions for phase {self.state.phase.name}!")
+        else:
+            print(f"Legal actions for {self.state.phase.name}: {[a.action_type.name for a in actions]}")
+        
+        return actions
+    
     # ========== GAME SETUP ==========
 
     def _create_deck(self):
@@ -551,11 +627,11 @@ class StoolPigeonGame:
                 deck.append(Card(CardType.NUMBERED, value))
         
         # Add action cards, 4 of each
-        for _ in range(40):
+        for _ in range(4):
             deck.append(Card(CardType.STOOL_PIGEON))
-            # deck.append(Card(CardType.BAMBOOZLE))
-            # deck.append(Card(CardType.VENDETTA))
-            # deck.append(Card(CardType.KINGPIN))
+            deck.append(Card(CardType.BAMBOOZLE))
+            deck.append(Card(CardType.VENDETTA))
+            deck.append(Card(CardType.KINGPIN))
 
         # Add special cards, 2 of each
         for _ in range(2):
