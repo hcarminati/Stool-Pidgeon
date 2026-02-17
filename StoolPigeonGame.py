@@ -1,15 +1,16 @@
 import random
 import pygame
+import time
 from cards import CardType, Card  
 from button import Button 
 from game_state import GameState, GamePhase
 from actions import Action, ActionType
-
+from agents.random_agent import RandomAgent
 
 class StoolPigeonGame:
     """Main game class that handles game logic, rendering, and user input."""
     
-    def __init__(self, GUI=False, render_delay_sec=0.3):
+    def __init__(self, GUI=False, render_delay_sec=0.3, agent_class=None):
         """Initialize the game."""
         # Game configuration
         self.GUI = GUI
@@ -49,6 +50,14 @@ class StoolPigeonGame:
 
         # Game state
         self.state = GameState()
+
+        # Agent
+        self.agent = None
+        self.agent_delay = render_delay_sec 
+
+        if agent_class is not None:
+            self.agent = agent_class(self, player_idx=1)
+
         
         # Card tracking
         self.peeked_card = None
@@ -104,6 +113,13 @@ class StoolPigeonGame:
     
     def _refresh(self):
         """Redraw the entire game screen."""
+
+        # Clear screen first ===
+        if self.background:
+            self.screen.blit(self.background, (0, 0))
+        else:
+            self.screen.fill((26, 26, 46))
+            
         mouse_pos = pygame.mouse.get_pos()
         is_user_turn = self.state.is_user_turn()
         active_mouse = mouse_pos if is_user_turn else None
@@ -306,6 +322,7 @@ class StoolPigeonGame:
             self.eliminate_button.draw(self.screen, active_mouse)
             self.add_button.draw(self.screen, active_mouse)
 
+    # TODO: Delete
     def _render_error_message(self):
         """Render error message if active."""
         if self.error_message and self.error_message_timer > 0:
@@ -478,7 +495,42 @@ class StoolPigeonGame:
         if (self.knock_button.contains(pos) and not self.state.has_knocked() and
             self.state.phase not in special_phases):
             Action.knock().execute_action(self, GamePhase)
-
+    
+    # ========== HANDLE AGENT ==========
+    def _handle_agent_turn(self):
+        """Let the agent take its turn."""
+        if self.agent is None:
+            return
+        
+        if not self.state.is_agent_turn():
+            return
+        
+        if self.state.phase == GamePhase.GAME_OVER:
+            return
+        
+        # Add slight delay so human can see what's happening
+        if self.GUI:
+            time.sleep(self.agent_delay)
+        
+        # Handle draw phase first
+        if self.state.phase == GamePhase.DRAW:
+            action = self.agent.choose_action()
+            print(f"Agent draws: {action.action_type.name}")
+            action.execute_action(self, GamePhase)
+            
+            if self.GUI:
+                self._refresh()
+                time.sleep(self.agent_delay)
+        
+        # Handle decide phase (after drawing)
+        if self.state.phase == GamePhase.DECIDE and self.state.is_agent_turn():
+            action = self.agent.choose_action()
+            print(f"Agent decides: {action.action_type.name}")
+            action.execute_action(self, GamePhase)
+            
+            if self.GUI:
+                self._refresh()
+    
     # ========== GAME SETUP ==========
 
     def _create_deck(self):
@@ -529,6 +581,11 @@ class StoolPigeonGame:
 
             self._refresh()
 
+            if self.state.is_agent_turn() and self.state.phase != GamePhase.GAME_OVER:
+                self._handle_agent_turn()
+                continue  # Skip event processing during agent turn
+
+
             for event in pygame.event.get():
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     self._handle_click(event.pos)
@@ -542,5 +599,9 @@ class StoolPigeonGame:
 
 
 if __name__ == "__main__":
-    game = StoolPigeonGame(GUI=True, render_delay_sec=0.1)
+    # Play against random agent
+    game = StoolPigeonGame(GUI=True, render_delay_sec=0.5, agent_class=RandomAgent)
     game._main()
+    
+    # game = StoolPigeonGame(GUI=True, render_delay_sec=0.1)
+    # game._main()
