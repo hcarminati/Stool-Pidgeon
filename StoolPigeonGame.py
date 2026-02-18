@@ -522,7 +522,12 @@ class StoolPigeonGame:
         while self.state.is_agent_turn() and self.state.phase != GamePhase.GAME_OVER:
             action = self.agent.choose_action()
             print(f"Agent: {action.action_type.name}")
-            action.execute_action(self, GamePhase)
+
+            if self.GUI:
+                self._refresh()
+                time.sleep(self.agent_delay) 
+
+            action.execute_action(self, GamePhase, agent=True)
             
             if self.GUI:
                 self._refresh()
