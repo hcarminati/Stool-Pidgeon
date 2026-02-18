@@ -331,7 +331,6 @@ class StoolPigeonGame:
             self.eliminate_button.draw(self.screen, active_mouse)
             self.add_button.draw(self.screen, active_mouse)
 
-    # TODO: Delete
     def _render_error_message(self):
         """Render error message if active."""
         if self.error_message and self.error_message_timer > 0:
