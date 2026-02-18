@@ -317,7 +317,7 @@ class StoolPigeonGame:
             GamePhase.KINGPIN_CHOOSE, GamePhase.KINGPIN_ELIMINATE, GamePhase.KINGPIN_ADD
         ]
         
-        if self.state.phase not in special_phases:
+        if self.state.is_user_turn() and self.state.phase not in special_phases:
             self.knock_button.draw(self.screen, active_mouse)
         
         # Done button (shown during peek phases when card is selected)
