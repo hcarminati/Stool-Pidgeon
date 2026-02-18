@@ -18,6 +18,8 @@ class StoolPigeonGame:
         self.cardHeight = 90
         self.fps = 60
         self.background = None
+        self.background_user = None
+        self.background_agent = None
 
         # RGB color definitions
         self.black = (0, 0, 0)
@@ -58,7 +60,6 @@ class StoolPigeonGame:
         if agent_class is not None:
             self.agent = agent_class(self, player_idx=1)
 
-        
         # Card tracking
         self.peeked_card = None
         self.bamboozle_first_card = None
@@ -87,12 +88,18 @@ class StoolPigeonGame:
         pygame.display.set_caption("Stool Pigeon")
     
     def _load_background(self):
-        """Load and scale the background image."""
+        """Load and scale the background images."""
         try:
-            bg_image = pygame.image.load('images/game-background-light.png')
-            self.background = pygame.transform.scale(bg_image, (self.screenWidth, self.screenHeight))
+            bg_light = pygame.image.load('images/game-background-light.png')
+            self.background_user = pygame.transform.scale(bg_light, (self.screenWidth, self.screenHeight))
         except pygame.error:
-            self.background = None
+            self.background_user = None
+        
+        try:
+            bg_dark = pygame.image.load('images/game-background.png')
+            self.background_agent = pygame.transform.scale(bg_dark, (self.screenWidth, self.screenHeight))
+        except pygame.error:
+            self.background_agent = None
 
     # ========== HELPER METHODS ==========
 
@@ -114,9 +121,11 @@ class StoolPigeonGame:
     def _refresh(self):
         """Redraw the entire game screen."""
 
+        background = self.background_user if self.state.is_user_turn() else self.background_agent
+    
         # Clear screen first ===
-        if self.background:
-            self.screen.blit(self.background, (0, 0))
+        if background:
+            self.screen.blit(background, (0, 0))
         else:
             self.screen.fill((26, 26, 46))
             
@@ -700,7 +709,7 @@ class StoolPigeonGame:
 
 if __name__ == "__main__":
     # Play against random agent
-    game = StoolPigeonGame(GUI=True, render_delay_sec=0.5, agent_class=RandomAgent)
+    game = StoolPigeonGame(GUI=True, render_delay_sec=1.5, agent_class=RandomAgent)
     game._main()
     
     # game = StoolPigeonGame(GUI=True, render_delay_sec=0.1)
