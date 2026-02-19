@@ -109,9 +109,7 @@ class Action:
         if card.card_type == CardType.STOOL_PIGEON:
             game.state.pending_effect = CardType.STOOL_PIGEON
             if agent:
-                # Agent skips peek, goes straight to swap
-                game.state.set_phase(GamePhase.STOOL_PIGEON_SWAP)
-                print("Stool Pigeon: Agent skips peek, ready to swap.")
+                print("Stool Pigeon: Agent skips peek.")
             else:
                 game.state.set_phase(GamePhase.STOOL_PIGEON_PEEK)
                 print("Stool Pigeon effect activated! Click any card to peek at it.")
@@ -254,9 +252,7 @@ class Action:
         if agent:
             # Agent doesn't need to wait for UI - advance to next phase
             game.peeked_card = None
-            if game.state.phase == GamePhase.STOOL_PIGEON_PEEK:
-                game.state.set_phase(GamePhase.STOOL_PIGEON_SWAP)
-            elif game.state.phase == GamePhase.VENDETTA_PEEK:
+            if game.state.phase == GamePhase.VENDETTA_PEEK:
                 game.state.set_phase(GamePhase.VENDETTA_SWAP)
         # For humans, phase stays the same - they click "done" button to advance
     
@@ -267,6 +263,3 @@ class Action:
         if game.state.phase == GamePhase.VENDETTA_PEEK:
             game.state.set_phase(GamePhase.VENDETTA_SWAP)
             print("Done peeking. Now swap any two cards.")
-        elif game.state.phase == GamePhase.STOOL_PIGEON_PEEK:
-            game.state.set_phase(GamePhase.STOOL_PIGEON_SWAP)
-            print("Done peeking. Now swap the Stool Pigeon with one of your cards.")

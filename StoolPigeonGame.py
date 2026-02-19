@@ -151,7 +151,7 @@ class StoolPigeonGame:
         
         # Check if we're in a phase where drawn card should be shown
         show_phases = [
-            GamePhase.DECIDE, GamePhase.STOOL_PIGEON_PEEK, GamePhase.STOOL_PIGEON_SWAP,
+            GamePhase.DECIDE, GamePhase.STOOL_PIGEON_PEEK,
             GamePhase.BAMBOOZLE_SELECT, GamePhase.VENDETTA_PEEK, GamePhase.VENDETTA_SWAP,
             GamePhase.KINGPIN_CHOOSE, GamePhase.KINGPIN_ELIMINATE, GamePhase.KINGPIN_ADD
         ]
@@ -288,8 +288,6 @@ class StoolPigeonGame:
         if player_idx == 0:
             if phase == GamePhase.STOOL_PIGEON_PEEK or phase == GamePhase.VENDETTA_PEEK:
                 card.enable() if not is_peeked else card.disable()
-            elif phase == GamePhase.STOOL_PIGEON_SWAP:
-                card.enable() if card.card_type != CardType.RAT else card.disable()
             elif phase == GamePhase.BAMBOOZLE_SELECT:
                 card.enable() if card_idx < 2 else card.disable()
             elif phase == GamePhase.VENDETTA_SWAP or phase == GamePhase.KINGPIN_ELIMINATE:
@@ -312,7 +310,7 @@ class StoolPigeonGame:
         """Render all interactive buttons."""
         # Knock button (not shown during special card phases)
         special_phases = [
-            GamePhase.STOOL_PIGEON_PEEK, GamePhase.STOOL_PIGEON_SWAP,
+            GamePhase.STOOL_PIGEON_PEEK,
             GamePhase.BAMBOOZLE_SELECT, GamePhase.VENDETTA_PEEK, GamePhase.VENDETTA_SWAP,
             GamePhase.KINGPIN_CHOOSE, GamePhase.KINGPIN_ELIMINATE, GamePhase.KINGPIN_ADD
         ]
@@ -331,6 +329,7 @@ class StoolPigeonGame:
             self.eliminate_button.draw(self.screen, active_mouse)
             self.add_button.draw(self.screen, active_mouse)
 
+    # TODO: Delete
     def _render_error_message(self):
         """Render error message if active."""
         if self.error_message and self.error_message_timer > 0:
@@ -368,7 +367,6 @@ class StoolPigeonGame:
             GamePhase.DRAW: self._handle_draw_phase_click,
             GamePhase.DECIDE: self._handle_decide_phase_click,
             GamePhase.STOOL_PIGEON_PEEK: self._handle_stool_pigeon_peek_click,
-            GamePhase.STOOL_PIGEON_SWAP: self._handle_stool_pigeon_swap_click,
             GamePhase.BAMBOOZLE_SELECT: self._handle_bamboozle_select_click,
             GamePhase.VENDETTA_PEEK: self._handle_vendetta_peek_click,
             GamePhase.VENDETTA_SWAP: self._handle_vendetta_swap_click,
@@ -420,17 +418,12 @@ class StoolPigeonGame:
         
         # Check done button
         if self.peeked_card and self.done_button.contains(pos):
-            print("Done peeking. Now swap the Stool Pigeon with one of your cards.")
+            print("Done peeking.")
             self.peeked_card = None
-            self.state.set_phase(GamePhase.STOOL_PIGEON_SWAP)
-
-    def _handle_stool_pigeon_swap_click(self, pos):
-        """Handle clicks during STOOL_PIGEON_SWAP phase."""
-        for i, card in enumerate(self.user_hand):
-            if card is not None and card.contains(pos):
-                Action.keep_card(i).execute_action(self, GamePhase)
-                self.state.pending_effect = None
-                return
+            self.peeked_card = None
+            self.state.pending_effect = None
+            self.state.set_phase(GamePhase.DECIDE)
+            return
 
     def _handle_bamboozle_select_click(self, pos):
         """Handle clicks during BAMBOOZLE_SELECT phase."""
@@ -503,7 +496,7 @@ class StoolPigeonGame:
     def _check_knock_button(self, pos):
         """Check if knock button was clicked."""
         special_phases = [
-            GamePhase.STOOL_PIGEON_PEEK, GamePhase.STOOL_PIGEON_SWAP,
+            GamePhase.STOOL_PIGEON_PEEK,
             GamePhase.BAMBOOZLE_SELECT, GamePhase.VENDETTA_PEEK, GamePhase.VENDETTA_SWAP,
             GamePhase.KINGPIN_CHOOSE, GamePhase.KINGPIN_ELIMINATE, GamePhase.KINGPIN_ADD
         ]
@@ -569,13 +562,6 @@ class StoolPigeonGame:
                     actions.append(Action.peek(opponent, i))
             # ADD THIS: Can finish peeking
             actions.append(Action.done_peeking())
-            
-        elif self.state.phase == GamePhase.STOOL_PIGEON_SWAP:
-            # Must swap Stool Pigeon into hand (or discard)
-            for i, card in enumerate(self.get_current_hand()):
-                if card is not None and card.card_type != CardType.RAT:
-                    actions.append(Action.keep_card(i))
-            actions.append(Action.discard_drawn())
         
         elif self.state.phase == GamePhase.BAMBOOZLE_SELECT:
             # Can swap any two cards on the table
@@ -656,11 +642,11 @@ class StoolPigeonGame:
                 deck.append(Card(CardType.NUMBERED, value))
         
         # Add action cards, 4 of each
-        for _ in range(4):
+        for _ in range(400):
             deck.append(Card(CardType.STOOL_PIGEON))
-            deck.append(Card(CardType.BAMBOOZLE))
-            deck.append(Card(CardType.VENDETTA))
-            deck.append(Card(CardType.KINGPIN))
+            # deck.append(Card(CardType.BAMBOOZLE))
+            # deck.append(Card(CardType.VENDETTA))
+            # deck.append(Card(CardType.KINGPIN))
 
         # Add special cards, 2 of each
         for _ in range(2):
