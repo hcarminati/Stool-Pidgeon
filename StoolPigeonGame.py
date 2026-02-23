@@ -642,11 +642,11 @@ class StoolPigeonGame:
                 deck.append(Card(CardType.NUMBERED, value))
         
         # Add action cards, 4 of each
-        for _ in range(400):
+        for _ in range(4):
             deck.append(Card(CardType.STOOL_PIGEON))
-            # deck.append(Card(CardType.BAMBOOZLE))
-            # deck.append(Card(CardType.VENDETTA))
-            # deck.append(Card(CardType.KINGPIN))
+            deck.append(Card(CardType.BAMBOOZLE))
+            deck.append(Card(CardType.VENDETTA))
+            deck.append(Card(CardType.KINGPIN))
 
         # Add special cards, 2 of each
         for _ in range(2):
