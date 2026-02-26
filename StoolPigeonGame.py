@@ -287,11 +287,12 @@ class StoolPigeonGame:
         """Enable or disable a card based on current phase and card state."""
         phase = self.state.phase
         is_peeked = (self.peeked_card == (player_idx, card_idx))
+        has_peeked = self.peeked_card is not None
         
         # Player cards
         if player_idx == 0:
             if phase == GamePhase.STOOL_PIGEON_PEEK or phase == GamePhase.VENDETTA_PEEK:
-                card.enable() if not is_peeked else card.disable()
+                card.enable() if not has_peeked else card.disable()
             elif phase == GamePhase.START:
                 card.disable()
             elif phase == GamePhase.BAMBOOZLE_SELECT:
@@ -306,7 +307,7 @@ class StoolPigeonGame:
         # Agent cards
         else:
             if phase in [GamePhase.STOOL_PIGEON_PEEK, GamePhase.VENDETTA_PEEK]:
-                card.enable() if not is_peeked else card.disable()
+                card.enable() if not has_peeked else card.disable()
             elif phase in [GamePhase.BAMBOOZLE_SELECT, GamePhase.VENDETTA_SWAP]:
                 card.enable()
             else:
@@ -416,24 +417,24 @@ class StoolPigeonGame:
 
     def _handle_stool_pigeon_peek_click(self, pos):
         """Handle clicks during STOOL_PIGEON_PEEK phase."""
-        # Check user cards
-        for i, card in enumerate(self.user_hand):
-            if card is not None and card.contains(pos):
-                self.peeked_card = (0, i)
-                print(f"Peeking at your card {i}")
-                return
-        
-        # Check agent cards
-        for i, card in enumerate(self.agent_hands):
-            if card is not None and card.contains(pos):
-                self.peeked_card = (1, i)
-                print(f"Peeking at agent's card {i}")
-                return
+        if self.peeked_card is None:
+            # Check user cards
+            for i, card in enumerate(self.user_hand):
+                if card is not None and card.contains(pos):
+                    self.peeked_card = (0, i)
+                    print(f"Peeking at your card {i}")
+                    return
+            
+            # Check agent cards
+            for i, card in enumerate(self.agent_hands):
+                if card is not None and card.contains(pos):
+                    self.peeked_card = (1, i)
+                    print(f"Peeking at agent's card {i}")
+                    return
         
         # Check done button
         if self.peeked_card and self.done_button.contains(pos):
             print("Done peeking.")
-            self.peeked_card = None
             self.peeked_card = None
             self.state.pending_effect = None
             self.state.set_phase(GamePhase.DECIDE)
@@ -454,12 +455,13 @@ class StoolPigeonGame:
 
     def _handle_vendetta_peek_click(self, pos):
         """Handle clicks during VENDETTA_PEEK phase."""
-        selected = self._check_card_click(pos)
-        if selected:
-            self.peeked_card = selected
-            player_idx, card_idx = selected
-            print(f"Vendetta: Peeking at {'your' if player_idx == 0 else 'agent'} card {card_idx}")
-            return
+        if self.peeked_card is None:
+            selected = self._check_card_click(pos)
+            if selected:
+                self.peeked_card = selected
+                player_idx, card_idx = selected
+                print(f"Vendetta: Peeking at {'your' if player_idx == 0 else 'agent'} card {card_idx}")
+                return
         
         if self.peeked_card and self.done_button.contains(pos):
             print("Done peeking. Now swap any two cards.")
