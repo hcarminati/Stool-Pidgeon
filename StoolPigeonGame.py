@@ -186,6 +186,10 @@ class StoolPigeonGame:
         
         if self.draw_pile:
             top_card = self.draw_pile[-1]
+            if self.state.phase == GamePhase.START:
+                top_card.disable()
+            else:
+                top_card.enable()
             top_card.draw(self.screen, (350, 300), self.font, self.tinyFont, 
                          active_mouse, face_up=False, is_user_turn=is_user_turn)
             self.draw_pile_rect = top_card.rect
@@ -262,10 +266,10 @@ class StoolPigeonGame:
                     (self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK) or
                      self.state.is_phase(GamePhase.VENDETTA_PEEK)))
         
-        # Player cards: bottom 2 are face-up, or if being peeked
+        # Player cards: bottom 2 are face-up only at start, or if being peeked
         # Agent cards: only show if being peeked
         if player_idx == 0:
-            return (card_idx >= 2) or is_peeked
+            return (card_idx >= 2 and self.state.phase == GamePhase.START) or is_peeked
         else:
             return is_peeked
 
@@ -288,14 +292,16 @@ class StoolPigeonGame:
         if player_idx == 0:
             if phase == GamePhase.STOOL_PIGEON_PEEK or phase == GamePhase.VENDETTA_PEEK:
                 card.enable() if not is_peeked else card.disable()
+            elif phase == GamePhase.START:
+                card.disable()
             elif phase == GamePhase.BAMBOOZLE_SELECT:
                 card.enable() if card_idx < 2 else card.disable()
             elif phase == GamePhase.VENDETTA_SWAP or phase == GamePhase.KINGPIN_ELIMINATE:
                 card.enable()
-            elif phase == GamePhase.DECIDE:
+            elif phase == GamePhase.DECIDE or (phase == GamePhase.FINAL_TURN and self.state.drawn_card is not None):
                 card.enable() if card.card_type != CardType.RAT else card.disable()
             else:
-                card.enable() if card_idx >= 2 else card.disable()
+                card.disable()
         
         # Agent cards
         else:
@@ -310,6 +316,7 @@ class StoolPigeonGame:
         """Render all interactive buttons."""
         # Knock button (not shown during special card phases)
         special_phases = [
+            GamePhase.START,
             GamePhase.STOOL_PIGEON_PEEK,
             GamePhase.BAMBOOZLE_SELECT, GamePhase.VENDETTA_PEEK, GamePhase.VENDETTA_SWAP,
             GamePhase.KINGPIN_CHOOSE, GamePhase.KINGPIN_ELIMINATE, GamePhase.KINGPIN_ADD
@@ -318,10 +325,10 @@ class StoolPigeonGame:
         if self.state.is_user_turn() and self.state.phase not in special_phases:
             self.knock_button.draw(self.screen, active_mouse)
         
-        # Done button (shown during peek phases when card is selected)
-        if ((self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK) or 
+        # Done button (shown at START, or during peek phases when card is selected)
+        if self.state.phase == GamePhase.START or (((self.state.is_phase(GamePhase.STOOL_PIGEON_PEEK) or 
              self.state.is_phase(GamePhase.VENDETTA_PEEK)) and 
-            self.peeked_card is not None):
+            self.peeked_card is not None)):
             self.done_button.draw(self.screen, active_mouse)
         
         # Kingpin choice buttons
@@ -364,6 +371,7 @@ class StoolPigeonGame:
         
         # Route to phase-specific handler
         phase_handlers = {
+            GamePhase.START: self._handle_start_phase_click,
             GamePhase.DRAW: self._handle_draw_phase_click,
             GamePhase.DECIDE: self._handle_decide_phase_click,
             GamePhase.STOOL_PIGEON_PEEK: self._handle_stool_pigeon_peek_click,
@@ -380,6 +388,12 @@ class StoolPigeonGame:
         
         # Check knock button (available in most phases)
         self._check_knock_button(pos)
+
+    def _handle_start_phase_click(self, pos):
+        """Handle clicks during START phase."""
+        if self.done_button.contains(pos):
+            print("Game started.")
+            self.state.set_phase(GamePhase.DRAW)
 
     def _handle_draw_phase_click(self, pos):
         """Handle clicks during DRAW phase."""
@@ -496,6 +510,7 @@ class StoolPigeonGame:
     def _check_knock_button(self, pos):
         """Check if knock button was clicked."""
         special_phases = [
+            GamePhase.START,
             GamePhase.STOOL_PIGEON_PEEK,
             GamePhase.BAMBOOZLE_SELECT, GamePhase.VENDETTA_PEEK, GamePhase.VENDETTA_SWAP,
             GamePhase.KINGPIN_CHOOSE, GamePhase.KINGPIN_ELIMINATE, GamePhase.KINGPIN_ADD
@@ -531,7 +546,10 @@ class StoolPigeonGame:
         current_player = 0 if self.state.is_user_turn() else 1
         opponent = 1 - current_player
         
-        if self.state.phase == GamePhase.DRAW:
+        if self.state.phase == GamePhase.START:
+            pass # No legal agent actions during START
+            
+        elif self.state.phase == GamePhase.DRAW:
             actions.append(Action.draw_from_pile())
             if self.discard_pile:
                 actions.append(Action.draw_from_discard())
