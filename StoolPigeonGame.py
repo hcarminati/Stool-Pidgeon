@@ -6,6 +6,7 @@ from button import Button
 from game_state import GameState, GamePhase
 from actions import Action, ActionType
 from agents.random_agent import RandomAgent
+from title_screen import TitleScreen
 
 class StoolPigeonGame:
     """Main game class that handles game logic, rendering, and user input."""
@@ -69,11 +70,14 @@ class StoolPigeonGame:
         self.error_message = None
         self.error_message_timer = 0
         
+        self.title_screen = None 
+
         self._setup_game()
 
         if self.GUI:
             pygame.init()
             self._initScreen()
+            self.title_screen = TitleScreen(self.screenWidth, self.screenHeight)
             self._load_background()
             self._refresh()
 
@@ -133,14 +137,18 @@ class StoolPigeonGame:
         is_user_turn = self.state.is_user_turn()
         active_mouse = mouse_pos if is_user_turn else None
 
-        self._render_drawn_card(active_mouse, is_user_turn)
-        self._render_game_state()
-        self._render_draw_pile(active_mouse, is_user_turn)
-        self._render_discard_pile(active_mouse, is_user_turn)
-        self._render_player_hand(active_mouse, is_user_turn)
-        self._render_agent_hand(active_mouse, is_user_turn)
-        self._render_buttons(active_mouse)
-        self._render_error_message()
+        if self.state.phase == GamePhase.TITLE_SCREEN:
+            if self.title_screen is not None:
+                self.title_screen.render(self.screen, active_mouse)
+        else:
+            self._render_drawn_card(active_mouse, is_user_turn)
+            self._render_game_state()
+            self._render_draw_pile(active_mouse, is_user_turn)
+            self._render_discard_pile(active_mouse, is_user_turn)
+            self._render_player_hand(active_mouse, is_user_turn)
+            self._render_agent_hand(active_mouse, is_user_turn)
+            self._render_buttons(active_mouse)
+            self._render_error_message()
 
         pygame.display.flip()
 
@@ -317,6 +325,7 @@ class StoolPigeonGame:
         """Render all interactive buttons."""
         # Knock button (not shown during special card phases)
         special_phases = [
+            GamePhase.TITLE_SCREEN,
             GamePhase.START,
             GamePhase.STOOL_PIGEON_PEEK,
             GamePhase.BAMBOOZLE_SELECT, GamePhase.VENDETTA_PEEK, GamePhase.VENDETTA_SWAP,
@@ -372,6 +381,7 @@ class StoolPigeonGame:
         
         # Route to phase-specific handler
         phase_handlers = {
+            GamePhase.TITLE_SCREEN: self._handle_title_screen_click,
             GamePhase.START: self._handle_start_phase_click,
             GamePhase.DRAW: self._handle_draw_phase_click,
             GamePhase.DECIDE: self._handle_decide_phase_click,
@@ -389,6 +399,12 @@ class StoolPigeonGame:
         
         # Check knock button (available in most phases)
         self._check_knock_button(pos)
+
+    def _handle_title_screen_click(self, pos):
+        """Handle clicks during TITLE_SCREEN phase."""
+        if self.title_screen and self.title_screen.handle_click(pos):
+            print("Game started.")
+            self.state.set_phase(GamePhase.START)
 
     def _handle_start_phase_click(self, pos):
         """Handle clicks during START phase."""
@@ -512,6 +528,7 @@ class StoolPigeonGame:
     def _check_knock_button(self, pos):
         """Check if knock button was clicked."""
         special_phases = [
+            GamePhase.TITLE_SCREEN,
             GamePhase.START,
             GamePhase.STOOL_PIGEON_PEEK,
             GamePhase.BAMBOOZLE_SELECT, GamePhase.VENDETTA_PEEK, GamePhase.VENDETTA_SWAP,
@@ -548,7 +565,10 @@ class StoolPigeonGame:
         current_player = 0 if self.state.is_user_turn() else 1
         opponent = 1 - current_player
         
-        if self.state.phase == GamePhase.START:
+        if self.state.phase == GamePhase.TITLE_SCREEN:
+            pass # No legal agent actions during TITLE_SCREEN
+            
+        elif self.state.phase == GamePhase.START:
             pass # No legal agent actions during START
             
         elif self.state.phase == GamePhase.DRAW:
