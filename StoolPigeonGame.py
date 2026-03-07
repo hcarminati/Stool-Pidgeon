@@ -4,9 +4,10 @@ import time
 from cards import CardType, Card  
 from button import Button 
 from game_state import GameState, GamePhase
-from actions import Action, ActionType
+from actions import Action
 from agents.random_agent import RandomAgent
 from title_screen import TitleScreen
+from end_screen import EndScreen, calculate_score
 
 class StoolPigeonGame:
     """Main game class that handles game logic, rendering, and user input."""
@@ -70,7 +71,8 @@ class StoolPigeonGame:
         self.error_message = None
         self.error_message_timer = 0
         
-        self.title_screen = None 
+        self.title_screen = None
+        self.end_screen = None
 
         self._setup_game()
 
@@ -78,6 +80,7 @@ class StoolPigeonGame:
             pygame.init()
             self._initScreen()
             self.title_screen = TitleScreen(self.screenWidth, self.screenHeight)
+            self.end_screen = EndScreen(self.screenWidth, self.screenHeight)
             self._load_background()
             self._refresh()
 
@@ -119,6 +122,18 @@ class StoolPigeonGame:
         """Display an error message for a specified duration (in seconds)."""
         self.error_message = message
         self.error_message_timer = duration * self.fps
+    
+    def get_scores(self) -> dict:
+        """Return {'user': int, 'agent': int, 'winner': str}."""
+        u = calculate_score(self.user_hand)
+        a = calculate_score(self.agent_hands)
+        if u < a:
+            winner = "user"
+        elif a < u:
+            winner = "agent"
+        else:
+            winner = "tie"
+        return {"user": u, "agent": a, "winner": winner}
 
     # ========== RENDERING METHODS ==========
     
@@ -140,6 +155,12 @@ class StoolPigeonGame:
         if self.state.phase == GamePhase.TITLE_SCREEN:
             if self.title_screen is not None:
                 self.title_screen.render(self.screen, active_mouse)
+
+        elif self.state.phase == GamePhase.GAME_OVER:
+            # Then draw the end-screen overlay on top
+            if self.end_screen is not None:
+                self.end_screen.render(self.screen, self.user_hand,
+                                       self.agent_hands, active_mouse)
         else:
             self._render_drawn_card(active_mouse, is_user_turn)
             self._render_game_state()
@@ -368,6 +389,12 @@ class StoolPigeonGame:
     
     def _handle_click(self, pos):
         """Handle mouse clicks on game elements."""
+        # Game-over: only the Play Again button is active
+        if self.state.phase == GamePhase.GAME_OVER:
+            if self.end_screen and self.end_screen.handle_click(pos):
+                self._restart()
+            return
+        
         if not self.state.is_user_turn():
             return
         
@@ -702,6 +729,26 @@ class StoolPigeonGame:
         self.discard_pile = []
         self.agent_hands = [self.draw_pile.pop() for _ in range(4)]
         self.user_hand = [self.draw_pile.pop() for _ in range(4)]
+    
+    def _restart(self):
+        """Reset the game state and start a fresh round."""
+        self.state.reset()
+        self._setup_game()
+
+        # Re-create the agent with the fresh game reference
+        if self.agent is not None:
+            agent_class = type(self.agent)
+            self.agent = agent_class(self, player_idx=1)
+
+        # Clear transient UI state
+        self.peeked_card        = None
+        self.bamboozle_first_card = None
+        self.vendetta_first_card  = None
+        self.error_message      = None
+        self.error_message_timer = 0
+
+        self.state.set_phase(GamePhase.START)
+        print("=== New game started ===")
 
     # ========== MAIN LOOP ==========
     
