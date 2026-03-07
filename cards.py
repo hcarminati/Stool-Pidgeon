@@ -36,11 +36,19 @@ class Card:
         CardType.MEATBALL: (49, 37, 9) 
     }
 
+    CARD_VALUES = {
+        CardType.STOOL_PIGEON: 10,
+        CardType.BAMBOOZLE:    10,
+        CardType.VENDETTA:     10,
+        CardType.KINGPIN:      10,
+        CardType.RAT:          15,
+        CardType.MEATBALL:      0,
+    }
+
         # card_type: The CardType enum value (e.g., NUMBERED, STOOL_PIGEON)
-        # value: Only used for NUMBERED cards (2-10)
     def __init__(self, card_type, value=None, clickable=True):
         self.card_type = card_type
-        self.value = value
+        self.value = value if card_type == CardType.NUMBERED else self.CARD_VALUES[card_type]
         self.face_up = False  # Default to face-down
         self.rect = None  # Updated when drawn; used for click detection
         self.clickable = clickable

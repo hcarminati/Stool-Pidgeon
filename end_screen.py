@@ -2,22 +2,12 @@ import pygame
 from cards import CardType
 from button import Button
 
-CARD_SCORES = {
-    CardType.MEATBALL:      0,
-    CardType.STOOL_PIGEON: 10,
-    CardType.BAMBOOZLE:    10,
-    CardType.VENDETTA:     10,
-    CardType.KINGPIN:      10,
-    CardType.RAT:          15,
-}
-
 def calculate_score(hand: list) -> int:
     total = 0
     for card in hand:
         if card is None:
             continue
-        total += card.value if card.card_type == CardType.NUMBERED \
-                 else CARD_SCORES.get(card.card_type, 10)
+        total += card.value
     return total
 
 
@@ -147,8 +137,7 @@ class EndScreen:
 
         for i, card in enumerate(active):
             cx = start_x + i * (self.CARD_W + self.GAP)
-            pts = card.value if card.card_type == CardType.NUMBERED \
-                  else CARD_SCORES.get(card.card_type, 10)
+            pts = card.value
 
             # +N label
             label = self.tiny_font.render(f"+{pts}", True, self.muted)
