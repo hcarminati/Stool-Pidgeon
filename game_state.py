@@ -2,6 +2,7 @@ from enum import Enum, auto
 
 class GamePhase(Enum):
     """Represents the current phase of the game."""
+    TITLE_SCREEN = auto()       # Initial phase, showing start button
     START = auto()              # Initial phase where player flips two cards
     DRAW = auto()               # Player must draw from draw pile or discard pile
     DECIDE = auto()             # Player decides: keep drawn card or discard it
@@ -20,7 +21,7 @@ class GameState:
     
     def __init__(self):
         self.current_player_idx = 0
-        self.phase = GamePhase.START
+        self.phase = GamePhase.TITLE_SCREEN
         self.knocked_by = None
         self.drawn_card = None
         self.pending_effect = None
@@ -60,6 +61,7 @@ class GameState:
     def get_phase_instructions(self):
         """Returns the instructions for the current phase's action."""
         instructions = {
+            GamePhase.TITLE_SCREEN: "Welcome to Stool Pigeon! Click Start to play",
             GamePhase.START: "Look at your bottom two cards, then click Done to begin",
             GamePhase.DRAW: "Draw a card from the draw pile or discard pile",
             GamePhase.DECIDE: "Keep the card (swap with one of yours) or discard it",

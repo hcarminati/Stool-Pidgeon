@@ -4,8 +4,10 @@ import time
 from cards import CardType, Card  
 from button import Button 
 from game_state import GameState, GamePhase
-from actions import Action, ActionType
+from actions import Action
 from agents.random_agent import RandomAgent
+from title_screen import TitleScreen
+from end_screen import EndScreen, calculate_score
 
 class StoolPigeonGame:
     """Main game class that handles game logic, rendering, and user input."""
@@ -69,11 +71,16 @@ class StoolPigeonGame:
         self.error_message = None
         self.error_message_timer = 0
         
+        self.title_screen = None
+        self.end_screen = None
+
         self._setup_game()
 
         if self.GUI:
             pygame.init()
             self._initScreen()
+            self.title_screen = TitleScreen(self.screenWidth, self.screenHeight)
+            self.end_screen = EndScreen(self.screenWidth, self.screenHeight)
             self._load_background()
             self._refresh()
 
@@ -115,6 +122,18 @@ class StoolPigeonGame:
         """Display an error message for a specified duration (in seconds)."""
         self.error_message = message
         self.error_message_timer = duration * self.fps
+    
+    def get_scores(self) -> dict:
+        """Return {'user': int, 'agent': int, 'winner': str}."""
+        u = calculate_score(self.user_hand)
+        a = calculate_score(self.agent_hands)
+        if u < a:
+            winner = "user"
+        elif a < u:
+            winner = "agent"
+        else:
+            winner = "tie"
+        return {"user": u, "agent": a, "winner": winner}
 
     # ========== RENDERING METHODS ==========
     
@@ -133,14 +152,24 @@ class StoolPigeonGame:
         is_user_turn = self.state.is_user_turn()
         active_mouse = mouse_pos if is_user_turn else None
 
-        self._render_drawn_card(active_mouse, is_user_turn)
-        self._render_game_state()
-        self._render_draw_pile(active_mouse, is_user_turn)
-        self._render_discard_pile(active_mouse, is_user_turn)
-        self._render_player_hand(active_mouse, is_user_turn)
-        self._render_agent_hand(active_mouse, is_user_turn)
-        self._render_buttons(active_mouse)
-        self._render_error_message()
+        if self.state.phase == GamePhase.TITLE_SCREEN:
+            if self.title_screen is not None:
+                self.title_screen.render(self.screen, active_mouse)
+
+        elif self.state.phase == GamePhase.GAME_OVER:
+            # Then draw the end-screen overlay on top
+            if self.end_screen is not None:
+                self.end_screen.render(self.screen, self.user_hand,
+                                       self.agent_hands, active_mouse)
+        else:
+            self._render_drawn_card(active_mouse, is_user_turn)
+            self._render_game_state()
+            self._render_draw_pile(active_mouse, is_user_turn)
+            self._render_discard_pile(active_mouse, is_user_turn)
+            self._render_player_hand(active_mouse, is_user_turn)
+            self._render_agent_hand(active_mouse, is_user_turn)
+            self._render_buttons(active_mouse)
+            self._render_error_message()
 
         pygame.display.flip()
 
@@ -287,11 +316,12 @@ class StoolPigeonGame:
         """Enable or disable a card based on current phase and card state."""
         phase = self.state.phase
         is_peeked = (self.peeked_card == (player_idx, card_idx))
+        has_peeked = self.peeked_card is not None
         
         # Player cards
         if player_idx == 0:
             if phase == GamePhase.STOOL_PIGEON_PEEK or phase == GamePhase.VENDETTA_PEEK:
-                card.enable() if not is_peeked else card.disable()
+                card.enable() if not has_peeked else card.disable()
             elif phase == GamePhase.START:
                 card.disable()
             elif phase == GamePhase.BAMBOOZLE_SELECT:
@@ -306,7 +336,7 @@ class StoolPigeonGame:
         # Agent cards
         else:
             if phase in [GamePhase.STOOL_PIGEON_PEEK, GamePhase.VENDETTA_PEEK]:
-                card.enable() if not is_peeked else card.disable()
+                card.enable() if not has_peeked else card.disable()
             elif phase in [GamePhase.BAMBOOZLE_SELECT, GamePhase.VENDETTA_SWAP]:
                 card.enable()
             else:
@@ -316,6 +346,7 @@ class StoolPigeonGame:
         """Render all interactive buttons."""
         # Knock button (not shown during special card phases)
         special_phases = [
+            GamePhase.TITLE_SCREEN,
             GamePhase.START,
             GamePhase.STOOL_PIGEON_PEEK,
             GamePhase.BAMBOOZLE_SELECT, GamePhase.VENDETTA_PEEK, GamePhase.VENDETTA_SWAP,
@@ -358,6 +389,12 @@ class StoolPigeonGame:
     
     def _handle_click(self, pos):
         """Handle mouse clicks on game elements."""
+        # Game-over: only the Play Again button is active
+        if self.state.phase == GamePhase.GAME_OVER:
+            if self.end_screen and self.end_screen.handle_click(pos):
+                self._restart()
+            return
+        
         if not self.state.is_user_turn():
             return
         
@@ -371,6 +408,7 @@ class StoolPigeonGame:
         
         # Route to phase-specific handler
         phase_handlers = {
+            GamePhase.TITLE_SCREEN: self._handle_title_screen_click,
             GamePhase.START: self._handle_start_phase_click,
             GamePhase.DRAW: self._handle_draw_phase_click,
             GamePhase.DECIDE: self._handle_decide_phase_click,
@@ -388,6 +426,12 @@ class StoolPigeonGame:
         
         # Check knock button (available in most phases)
         self._check_knock_button(pos)
+
+    def _handle_title_screen_click(self, pos):
+        """Handle clicks during TITLE_SCREEN phase."""
+        if self.title_screen and self.title_screen.handle_click(pos):
+            print("Game started.")
+            self.state.set_phase(GamePhase.START)
 
     def _handle_start_phase_click(self, pos):
         """Handle clicks during START phase."""
@@ -416,24 +460,24 @@ class StoolPigeonGame:
 
     def _handle_stool_pigeon_peek_click(self, pos):
         """Handle clicks during STOOL_PIGEON_PEEK phase."""
-        # Check user cards
-        for i, card in enumerate(self.user_hand):
-            if card is not None and card.contains(pos):
-                self.peeked_card = (0, i)
-                print(f"Peeking at your card {i}")
-                return
-        
-        # Check agent cards
-        for i, card in enumerate(self.agent_hands):
-            if card is not None and card.contains(pos):
-                self.peeked_card = (1, i)
-                print(f"Peeking at agent's card {i}")
-                return
+        if self.peeked_card is None:
+            # Check user cards
+            for i, card in enumerate(self.user_hand):
+                if card is not None and card.contains(pos):
+                    self.peeked_card = (0, i)
+                    print(f"Peeking at your card {i}")
+                    return
+            
+            # Check agent cards
+            for i, card in enumerate(self.agent_hands):
+                if card is not None and card.contains(pos):
+                    self.peeked_card = (1, i)
+                    print(f"Peeking at agent's card {i}")
+                    return
         
         # Check done button
         if self.peeked_card and self.done_button.contains(pos):
             print("Done peeking.")
-            self.peeked_card = None
             self.peeked_card = None
             self.state.pending_effect = None
             self.state.set_phase(GamePhase.DECIDE)
@@ -454,12 +498,13 @@ class StoolPigeonGame:
 
     def _handle_vendetta_peek_click(self, pos):
         """Handle clicks during VENDETTA_PEEK phase."""
-        selected = self._check_card_click(pos)
-        if selected:
-            self.peeked_card = selected
-            player_idx, card_idx = selected
-            print(f"Vendetta: Peeking at {'your' if player_idx == 0 else 'agent'} card {card_idx}")
-            return
+        if self.peeked_card is None:
+            selected = self._check_card_click(pos)
+            if selected:
+                self.peeked_card = selected
+                player_idx, card_idx = selected
+                print(f"Vendetta: Peeking at {'your' if player_idx == 0 else 'agent'} card {card_idx}")
+                return
         
         if self.peeked_card and self.done_button.contains(pos):
             print("Done peeking. Now swap any two cards.")
@@ -510,6 +555,7 @@ class StoolPigeonGame:
     def _check_knock_button(self, pos):
         """Check if knock button was clicked."""
         special_phases = [
+            GamePhase.TITLE_SCREEN,
             GamePhase.START,
             GamePhase.STOOL_PIGEON_PEEK,
             GamePhase.BAMBOOZLE_SELECT, GamePhase.VENDETTA_PEEK, GamePhase.VENDETTA_SWAP,
@@ -546,7 +592,10 @@ class StoolPigeonGame:
         current_player = 0 if self.state.is_user_turn() else 1
         opponent = 1 - current_player
         
-        if self.state.phase == GamePhase.START:
+        if self.state.phase == GamePhase.TITLE_SCREEN:
+            pass # No legal agent actions during TITLE_SCREEN
+            
+        elif self.state.phase == GamePhase.START:
             pass # No legal agent actions during START
             
         elif self.state.phase == GamePhase.DRAW:
@@ -680,6 +729,26 @@ class StoolPigeonGame:
         self.discard_pile = []
         self.agent_hands = [self.draw_pile.pop() for _ in range(4)]
         self.user_hand = [self.draw_pile.pop() for _ in range(4)]
+    
+    def _restart(self):
+        """Reset the game state and start a fresh round."""
+        self.state.reset()
+        self._setup_game()
+
+        # Re-create the agent with the fresh game reference
+        if self.agent is not None:
+            agent_class = type(self.agent)
+            self.agent = agent_class(self, player_idx=1)
+
+        # Clear transient UI state
+        self.peeked_card        = None
+        self.bamboozle_first_card = None
+        self.vendetta_first_card  = None
+        self.error_message      = None
+        self.error_message_timer = 0
+
+        self.state.set_phase(GamePhase.START)
+        print("=== New game started ===")
 
     # ========== MAIN LOOP ==========
     
