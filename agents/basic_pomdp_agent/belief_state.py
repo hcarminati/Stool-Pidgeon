@@ -31,8 +31,8 @@ class BeliefState:
 
         # Knows its own face-up cards at game start
         for slot in (2, 3):
-            card = game.agent_hands[slot]
-            self.mark_known(1, slot, card)
+            if slot < len(game.agent_hands) and game.agent_hands[slot] is not None:
+                self.mark_known(1, slot, game.agent_hands[slot])
     
     def probability(self, card):
         """P(a random unknown card == this type) under the uniform prior."""

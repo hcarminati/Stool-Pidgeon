@@ -8,6 +8,7 @@ from actions import Action
 from agents.random_agent import RandomAgent
 from title_screen import TitleScreen
 from end_screen import EndScreen, calculate_score
+from agents.basic_pomdp_agent.basic_pomdp_agent import BasicPOMDPAgent
 
 class StoolPigeonGame:
     """Main game class that handles game logic, rendering, and user input."""
@@ -786,8 +787,23 @@ class StoolPigeonGame:
 
 if __name__ == "__main__":
     # Play against random agent
-    game = StoolPigeonGame(GUI=True, render_delay_sec=1.5, agent_class=RandomAgent)
-    game._main()
+
+    game = StoolPigeonGame(GUI=True, render_delay_sec=1.5, agent_class=BasicPOMDPAgent)
+    game.state.set_phase(GamePhase.DRAW)
+    for _ in range(10):
+        if game.state.phase.name == "GAME_OVER":
+            break
+        
+        action = game.agent.choose_action()
+        print(f"\nAction: {action.action_type.name}")
+        action.execute_action(game, type(game.state.phase))
+        
+        obs = game.agent.get_observations()
+        for o in obs:
+            print(f"  OBS: {o.obs_type.name} card={o.card} player={o.player} slot={o.slot}")
+    
+    # game = StoolPigeonGame(GUI=True, render_delay_sec=1.5, agent_class=RandomAgent)
+    # game._main()
     
     # game = StoolPigeonGame(GUI=True, render_delay_sec=0.1)
     # game._main()

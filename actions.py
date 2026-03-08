@@ -1,5 +1,6 @@
 from enum import Enum, auto
 from cards import CardType
+from agents.basic_pomdp_agent.observation import Observation, ObsType
 
 class ActionType(Enum):
     """Types of actions a player can take."""
@@ -86,15 +87,18 @@ class Action:
             self._execute_kingpin_add(game, GamePhase)
         elif self.action_type == ActionType.DONE_PEEKING:
             self._execute_done_peeking(game, GamePhase)
-    
+  
     def _execute_draw_from_pile(self, game, GamePhase, agent=False):
         """Draw a card from the draw pile."""
         card = game.draw_pile.pop()
         game.state.drawn_card = card
         game.state.set_phase(GamePhase.DECIDE)
         print(f"Drew: {card.card_type.name}" + (f" ({card.value})" if card.value else ""))
-        
-        self._activate_special_card_effect(game, GamePhase, card, agent)  # <-- Pass agent
+       
+        self._activate_special_card_effect(game, GamePhase, card, agent) 
+
+        if game.state.is_agent_turn() and hasattr(game.agent, 'observe'):
+            game.agent.observe(Observation(ObsType.AGENT_DRAW_PILE))
 
     def _execute_draw_from_discard(self, game, GamePhase, agent=False):
         """Draw a card from the discard pile."""
@@ -103,6 +107,9 @@ class Action:
         game.state.set_phase(GamePhase.DECIDE)
         
         self._activate_special_card_effect(game, GamePhase, card, agent) 
+
+        if game.state.is_user_turn() and hasattr(game.agent, 'observe'):
+            game.agent.observe(Observation(ObsType.PLAYER_DRAW_DISCARD, card=card, player=game.state.current_player_idx))
 
     def _activate_special_card_effect(self, game, GamePhase, card, agent=False):
         """Activate special effects for action cards."""
@@ -156,12 +163,24 @@ class Action:
         # Perform swap
         hand[self.target_idx] = game.state.drawn_card
         game.discard_pile.append(old_card)
+
+        if hasattr(game.agent, 'observe'):
+            obs_type = ObsType.AGENT_KEEP if game.state.is_agent_turn() else ObsType.PLAYER_KEEP
+            game.agent.observe(Observation(obs_type,
+                                        card=old_card,
+                                        player=game.state.current_player_idx,
+                                        slot=self.target_idx))
+    
         game.state.drawn_card = None
         game.state.next_turn()
     
     def _execute_discard_drawn(self, game, GamePhase):
         """Discard the drawn card."""
         game.discard_pile.append(game.state.drawn_card)
+
+        if game.state.is_user_turn() and hasattr(game.agent, 'observe'):
+            game.agent.observe(Observation(ObsType.PLAYER_DISCARD, card=game.state.drawn_card))
+
         game.state.drawn_card = None
         game.state.next_turn()
     
@@ -169,6 +188,8 @@ class Action:
         """Execute knock action."""
         game.state.handle_knock()
         # game.state.next_turn()
+        if hasattr(game.agent, 'observe'):
+            game.agent.observe(Observation(ObsType.KNOCK, player=game.state.current_player_idx))
     
     def _execute_swap(self, game, GamePhase):
         """Swap two cards (Bamboozle/Vendetta effect)."""
@@ -189,6 +210,11 @@ class Action:
         
         # Perform swap (RAT cards CAN be swapped with Bamboozle/Vendetta)
         hand1[card1_idx], hand2[card2_idx] = hand2[card2_idx], hand1[card1_idx]
+
+        if hasattr(game.agent, 'observe'):
+            obs_type = ObsType.AGENT_SWAP if not game.state.is_user_turn() else ObsType.PLAYER_SWAP
+            game.agent.observe(Observation(obs_type, p1=player1_idx, s1=card1_idx, p2=player2_idx, s2=card2_idx))
+
         print(f"Swapped player {player1_idx} card {card1_idx} with player {player2_idx} card {card2_idx}")
         
         # Clean up
@@ -207,6 +233,12 @@ class Action:
               (f" ({eliminated_card.value})" if eliminated_card.value else ""))
         
         hand[self.target_idx] = None
+
+        if hasattr(game.agent, 'observe'):
+            game.agent.observe(Observation(ObsType.KINGPIN_ELIMINATE,
+                                           card=eliminated_card,
+                                           player=game.state.current_player_idx,
+                                           slot=self.target_idx))
         
         active_cards = sum(1 for card in hand if card is not None)
         print(f"Player now has {active_cards} cards in hand")
@@ -229,6 +261,9 @@ class Action:
         opponent_hand = game.get_opponent_hand()
         opponent_hand.append(new_card)
         
+        if hasattr(game.agent, 'observe'):
+            game.agent.observe(Observation(ObsType.KINGPIN_ADD, player=self.target_player))
+
         opponent_name = "Agent" if game.state.is_user_turn() else "User"
         print(f"Kingpin added card to {opponent_name}: {new_card.card_type.name}" + 
               (f" ({new_card.value})" if new_card.value else ""))
@@ -247,6 +282,10 @@ class Action:
         For agents: Sets peeked_card and immediately advances to next phase
         """
         game.peeked_card = (self.target_player, self.target_idx)
+        if game.state.is_agent_turn() and hasattr(game.agent, 'observe'):
+            peeked = game.agent_hands[self.target_idx] if self.target_player == 1 else game.user_hand[self.target_idx]
+            game.agent.observe(Observation(ObsType.AGENT_PEEK, card=peeked, player=self.target_player, slot=self.target_idx))
+
         print(f"Peeked at player {self.target_player}, card {self.target_idx}")
         
         if agent:
