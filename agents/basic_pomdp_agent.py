@@ -1,20 +1,93 @@
 from collections import Counter
 
 class BeliefState:
-    """Tracks what the agent believes about cards it cannot see.""" 
+    """Tracks what the agent believes about cards it cannot see.
+
+        Cause a card to be known:
+        -  game start (own face-up cards)
+        - peek (Stool Pigeon/Vendetta)
+        - keep card (agent swaps drawn card in, it knows what it just placed)
+
+        Remove from game completely:
+        -  discard
+        - Kingpin eliminate
+
+        * Swap (Bamboozle/Vendetta) shuffles slots
+        - if A is known (card X) and slot B is unknown, 
+        after the swap slot B now contains card X — we know that. 
+        Only slot A becomes uncertain.
+    """
     
     def __init__(self, game):
-        self._counts = Counter((card.card_type, card.value) for card in game._create_deck())
-        self._total = sum(self._counts.values())
+        # counts of unknown cards
+        self._unknown = Counter((card.card_type, card.value) for card in game._create_deck())
+
+        # All slots start unknown at first
+        self._known: dict[tuple, object] = {
+            (p, s): None
+            for p in range(2) # position
+            for s in range(len(game.agent_hands)) # slots
+        }
+
+        # Knows its own face-up cards at game start
+        for slot in (2, 3):
+            card = game.agent_hands[slot]
+            self.mark_known(1, slot, card)
+
     
     def probability(self, card_type, value):
         """P(a random unknown card == this type) under the uniform prior."""
-        if self._total == 0:
-            return 0
-        return self._counts[(card_type, value)] / self._total
+        total = sum(self._unknown.values())
 
-    def _remove_from_pool(self, card_type, value, n):
-        """Remove n copies of a card from the unknown pool."""
-        k = (card_type, value)
-        self._counts[k] = max(0, self._counts[k] - n)
-        self._total = max(0, self._total - n)
+        if total == 0:
+            return 0
+        return self._unknown[(card_type, value)] / total
+
+    def mark_known(self, player, slot, card):
+        """ Remove card from the unknown pool and record the slot.
+            Called in game start(own face-up cards), peek, keep_card.
+        """
+        # check if card is known
+        previous_card = self._known.get((player, slot))
+        if previous_card is None: # was unknown, remove from unknown pool
+            self._unknown[(card.card_type, card.value)] = max(
+                0, self._unknown[(card.card_type, card.value)] - 1
+            )
+        self._known[(player, slot)] = card
+
+    def mark_removed(self, card):
+        """ A card has been removed from the game entirely (discarded or Kingpin eliminated)."""
+        for key, known_card in self._known.items():
+            if known_card is card:
+                self._known[key] = None
+                return 
+        self._unknown[(card.card_type, card.value)] = max(
+            0, self._unknown[(card.card_type, card.value)] - 1
+        )
+    
+    def mark_unknown(self, player, slot):
+        """Slot is no longer certain, add its card back into the unknown pool."""
+        card = self._known.get((player, slot))
+        if card is not None:
+            self._unknown[(card.card_type, card.value)] += 1
+        self._known[(player, slot)] = None
+    
+    def after_swap(self, p1, s1, p2, s2):
+        """Update known slots after a Bamboozle/Vendetta swap."""
+        c1 = self._known.get((p1, s1))
+        c2 = self._known.get((p2, s2))
+
+        # If both cards are known
+        if c1 is not None and c2 is not None:
+            self._known[(p1, s1)] = c2
+            self._known[(p2, s2)] = c1
+        
+        # If only card 1 is known
+        elif c1 is not None:
+            self._known[(p2, s2)] = c1
+            self._known[(p1, s1)] = None
+
+        # If only card 2 is known
+        elif c2 is not None:
+            self._known[(p1, s1)] = c2
+            self._known[(p2, s2)] = None
