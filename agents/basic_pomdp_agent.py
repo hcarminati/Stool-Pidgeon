@@ -33,15 +33,14 @@ class BeliefState:
         for slot in (2, 3):
             card = game.agent_hands[slot]
             self.mark_known(1, slot, card)
-
     
-    def probability(self, card_type, value):
+    def probability(self, card):
         """P(a random unknown card == this type) under the uniform prior."""
         total = sum(self._unknown.values())
 
         if total == 0:
             return 0
-        return self._unknown[(card_type, value)] / total
+        return self._unknown[(card.card_type, card.value)] / total
 
     def mark_known(self, player, slot, card):
         """ Remove card from the unknown pool and record the slot.
@@ -91,3 +90,33 @@ class BeliefState:
         elif c2 is not None:
             self._known[(p1, s1)] = c2
             self._known[(p2, s2)] = None
+    
+    def slot_expected_value(self, player, slot):
+        """ Expected point value of a single slot 
+        If its a known value then return the card.value 
+        If its an unknown value then return the probability-weighted average over _unknown values"""
+
+        card = self._known.get((player, slot))
+        if card is not None:
+            return card.value
+        
+        total = sum(self._unknown.values())
+        if total == 0:
+            return 0.0
+        
+        expected = 0.0
+        for (card_type, value), count in self._unknown.items():
+            expected += value * count / total 
+        return expected
+    
+    def expected_hand_value(self, player):
+        """ Expected total hand value for a player, sum across all slots.
+        Lower is better. Agent uses this to decide whether to knock.
+        """
+        total = 0.0
+
+        for (p, s) in self._known:
+            if p == player:
+                total += self.slot_expected_value(player, s)
+        
+        return total
