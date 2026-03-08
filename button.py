@@ -1,6 +1,7 @@
 import pygame
 
 class Button:
+    """Handles button rendering and actions."""
     def __init__(self, position, width, height, image, clickable=True):
         self.x, self.y = position
         self.width = width
@@ -8,11 +9,11 @@ class Button:
         self.rect = pygame.Rect(self.x, self.y, width, height)
         self.image = image
         self.clickable = clickable
-    
+
     def enable(self):
         """Make the button clickable."""
         self.clickable = True
-    
+
     def disable(self):
         """Make the button non-clickable (no hover effect, ignored by clicks)."""
         self.clickable = False
@@ -20,12 +21,13 @@ class Button:
     def is_clickable(self):
         """Check if the button is clickable."""
         return self.clickable
-    
+
     def contains(self, pos):
         """Check if a position (e.g., mouse click) is inside the button."""
         return self.is_clickable and self.rect.collidepoint(pos)
-    
+
     def draw(self, screen, mouse_pos=None):
+        """Draws the button."""
         try:
             # Load and draw button image
             card_image = pygame.image.load(self.image)

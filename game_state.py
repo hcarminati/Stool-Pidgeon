@@ -18,7 +18,7 @@ class GamePhase(Enum):
 
 class GameState:
     """Holds all game state variables and state-related logic."""
-    
+
     def __init__(self):
         self.current_player_idx = 0
         self.phase = GamePhase.TITLE_SCREEN
@@ -27,33 +27,33 @@ class GameState:
         self.pending_effect = None
         self.selected_card = None
         self.turns_since_knock = 0
-    
+
     def reset(self):
         """Reset all state to initial values."""
         self.__init__()
-    
+
     # ========== PLAYER INFO ==========
-    
+
     def get_current_player_name(self):
         """Returns the current player name."""
         return "User" if self.current_player_idx == 0 else "Agent"
-    
+
     def is_user_turn(self):
         """Returns true if it's the user's turn."""
         return self.current_player_idx == 0
-    
+
     def is_agent_turn(self):
         """Returns true if it's the agent's turn."""
         return self.current_player_idx == 1
 
     # ========== PHASE MANAGEMENT ==========
-    
+
     def set_phase(self, new_phase):
         """Sets the current phase."""
         old_phase = self.phase
         self.phase = new_phase
         print(f"Phase: {old_phase.name} -> {new_phase.name}")
-    
+
     def is_phase(self, phase):
         """Returns true if current phase matches the given phase."""
         return self.phase == phase
@@ -78,7 +78,7 @@ class GameState:
         return instructions.get(self.phase, "")
 
     # ========== TURN MANAGEMENT ==========
-    
+
     def next_turn(self):
         """Advance to the next player's turn. Returns True if game continues."""
         if self.knocked_by is not None:
@@ -88,19 +88,19 @@ class GameState:
             if self.turns_since_knock >= 2:
                 self.set_phase(GamePhase.GAME_OVER)
                 return False
-        
+
         self.current_player_idx = 1 - self.current_player_idx
         self.drawn_card = None
         self.pending_effect = None
         self.selected_card = None
-        
+
         # Set the phase to final turn if the player knocked, if not set it to draw. 
         self.set_phase(GamePhase.FINAL_TURN if self.knocked_by is not None else GamePhase.DRAW)
         print(f"--- {self.get_current_player_name()}'s Turn ---")
         return True
 
     # ========== KNOCK MANAGEMENT ==========
-    
+
     def handle_knock(self):
         """Handle when a player knocks. Returns True if knock was valid."""
         if self.knocked_by is None and self.phase != GamePhase.GAME_OVER:
@@ -108,28 +108,28 @@ class GameState:
             print(f"{self.get_current_player_name()} knocked!")
             return True
         return False
-    
+
     def has_knocked(self):
         """Returns true if a player knocked, false otherwise."""
         return self.knocked_by is not None
 
     # ========== CARD SELECTION ==========
-    
+
     def select_card(self, player_idx, card_idx):
         """Sets the selected card and player who selected it."""
         self.selected_card = (player_idx, card_idx)
         print(f"Selected card: player {player_idx}, index {card_idx}")
-    
+
     def clear_selection(self):
         """Clears the selected card."""
         self.selected_card = None
-    
+
     def has_selection(self):
         """Returns true if there is a selected card, false otherwise."""
         return self.selected_card is not None
 
     # ========== DEBUG ==========
-    
+
     def print_state(self):
         """For debugging purposes."""
         print(f"\n=== GAME STATE ===")

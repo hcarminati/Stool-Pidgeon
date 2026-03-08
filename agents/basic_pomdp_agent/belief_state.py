@@ -17,7 +17,7 @@ class BeliefState:
         after the swap slot B now contains card X — we know that. 
         Only slot A becomes uncertain.
     """
-    
+
     def __init__(self, game):
         # counts of unknown cards
         self._unknown = Counter((card.card_type, card.value) for card in game._create_deck())
@@ -33,7 +33,7 @@ class BeliefState:
         for slot in (2, 3):
             if slot < len(game.agent_hands) and game.agent_hands[slot] is not None:
                 self.mark_known(1, slot, game.agent_hands[slot])
-    
+
     def probability(self, card):
         """P(a random unknown card == this type) under the uniform prior."""
         total = sum(self._unknown.values())
@@ -63,14 +63,14 @@ class BeliefState:
         self._unknown[(card.card_type, card.value)] = max(
             0, self._unknown[(card.card_type, card.value)] - 1
         )
-    
+
     def mark_unknown(self, player, slot):
         """Slot is no longer certain, add its card back into the unknown pool."""
         card = self._known.get((player, slot))
         if card is not None:
             self._unknown[(card.card_type, card.value)] += 1
         self._known[(player, slot)] = None
-    
+
     def after_swap(self, p1, s1, p2, s2):
         """Update known slots after a Bamboozle/Vendetta swap."""
         c1 = self._known.get((p1, s1))
@@ -80,7 +80,7 @@ class BeliefState:
         if c1 is not None and c2 is not None:
             self._known[(p1, s1)] = c2
             self._known[(p2, s2)] = c1
-        
+
         # If only card 1 is known
         elif c1 is not None:
             self._known[(p2, s2)] = c1
@@ -90,7 +90,7 @@ class BeliefState:
         elif c2 is not None:
             self._known[(p1, s1)] = c2
             self._known[(p2, s2)] = None
-    
+
     def slot_expected_value(self, player, slot):
         """ Expected point value of a single slot 
         If its a known value then return the card.value 
@@ -99,16 +99,16 @@ class BeliefState:
         card = self._known.get((player, slot))
         if card is not None:
             return card.value
-        
+
         total = sum(self._unknown.values())
         if total == 0:
             return 0.0
-        
+
         expected = 0.0
         for (card_type, value), count in self._unknown.items():
             expected += value * count / total 
         return expected
-    
+
     def expected_hand_value(self, player):
         """ Expected total hand value for a player, sum across all slots.
         Lower is better. Agent uses this to decide whether to knock.
@@ -118,5 +118,5 @@ class BeliefState:
         for (p, s) in self._known:
             if p == player:
                 total += self.slot_expected_value(player, s)
-        
+
         return total

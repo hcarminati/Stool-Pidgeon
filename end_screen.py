@@ -1,8 +1,8 @@
 import pygame
-from cards import CardType
 from button import Button
 
 def calculate_score(hand: list) -> int:
+    """Calculates each player's score."""
     total = 0
     for card in hand:
         if card is None:
@@ -12,6 +12,7 @@ def calculate_score(hand: list) -> int:
 
 
 class EndScreen:
+    """Handles the end screen rendering and clicking."""
     CARD_W, CARD_H = 65, 90
     GAP = 12
 
@@ -47,6 +48,7 @@ class EndScreen:
         )
 
     def render(self, screen, user_hand: list, agent_hand: list, mouse_pos=None):
+        """Renders the end screen."""
         user_score  = calculate_score(user_hand)
         agent_score = calculate_score(agent_hand)
 
@@ -61,7 +63,7 @@ class EndScreen:
         screen.blit(title_surf, title_surf.get_rect(
             center=(self.screen_width // 2, 72)))
 
-        # Main panel 
+        # Main panel
         panel = pygame.Rect(30, 150, self.screen_width - 60, 390)
         pygame.draw.rect(screen, (40, 38, 60), panel, border_radius=8)
         pygame.draw.rect(screen, (70, 65, 100), panel, 1, border_radius=8)
@@ -109,15 +111,19 @@ class EndScreen:
         self.new_game_btn.draw(screen, mouse_pos)
 
     def handle_click(self, pos) -> bool:
+        """Handles clicking the new game button."""
         return self.new_game_btn.contains(pos)
 
     # Helpers
 
     def _draw_section(self, screen, heading, lines, x, y, width):
         # Faint highlight bar behind the heading
-        bar = pygame.Surface((width, 22), pygame.SRCALPHA)
-        pygame.draw.rect(bar, (*self.red_orange, 55), bar.get_rect(), border_radius=4)
-        screen.blit(bar, (x, y))
+        hghlght_bar = pygame.Surface((width, 22), pygame.SRCALPHA)
+        pygame.draw.rect(hghlght_bar,
+                         (*self.red_orange, 55),
+                         hghlght_bar.get_rect(),
+                         border_radius=4)
+        screen.blit(hghlght_bar, (x, y))
 
         heading_surf = self.section_font.render(heading, True, self.red_orange)
         screen.blit(heading_surf, (x + 6, y + 2))

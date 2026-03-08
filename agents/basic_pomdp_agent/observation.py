@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from enum import Enum, auto
 
 class ObsType(Enum):
+    """Types of observations the agent can have."""
     AGENT_DRAW_PILE     = auto()  # agent drew from pile — card unknown
     PLAYER_DISCARD      = auto()  # player discarded a visible card
     AGENT_KEEP          = auto()  # agent kept drawn, discarded old card (visible)
@@ -16,6 +17,7 @@ class ObsType(Enum):
 
 @dataclass
 class Observation:
+    """Observation attributes."""
     obs_type: ObsType
     card:   object = None  # visible card (discarded, peeked, eliminated, or taken from discard)
     card2:  object = None  # PLAYER_DRAW_DISCARD only: card put back into discard
