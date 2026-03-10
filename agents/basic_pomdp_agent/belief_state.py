@@ -34,6 +34,9 @@ class BeliefState:
             if slot < len(game.agent_hands) and game.agent_hands[slot] is not None:
                 self.mark_known(1, slot, game.agent_hands[slot])
 
+    def get_known(self, opponent_idx, action):
+        return self._known.get((opponent_idx, action.target_idx))
+
     def probability(self, card):
         """P(a random unknown card == this type) under the uniform prior."""
         total = sum(self._unknown.values())
@@ -106,7 +109,7 @@ class BeliefState:
 
         expected = 0.0
         for (card_type, value), count in self._unknown.items():
-            expected += value * count / total 
+            expected += value * count / total
         return expected
 
     def expected_hand_value(self, player):

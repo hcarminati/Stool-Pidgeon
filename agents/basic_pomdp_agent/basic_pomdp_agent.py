@@ -13,6 +13,7 @@ class BasicPOMDPAgent:
         self.player_idx = player_idx
         self.belief = BeliefState(game)
         self._observations = []
+        self._peeked_this_turn = False
 
     def observe(self, obs):
         """Called by the game to deliver an observation to the agent."""
@@ -39,11 +40,52 @@ class BasicPOMDPAgent:
             if self._should_knock():
                 return next(a for a in actions if a.action_type == ActionType.KNOCK)
 
+        # Peek at the opponent's highest expected value slot
+        if ActionType.PEEK in action_types and not self._peeked_this_turn:
+            self._peeked_this_turn = True
+            return self._best_peek_action(actions)
+
+        # Finish peeking after one peek
+        if ActionType.DONE_PEEKING in action_types:
+            self._peeked_this_turn = False
+            return next(a for a in actions if a.action_type == ActionType.DONE_PEEKING)
+
+        print(f"Known: {[(k,v.value) for k,v in self.belief._known.items() if v is not None]}")
+
         return random.choice(actions)
 
     # Decision Helpers
-    def _should_knock(self) -> bool:
-        """Knock if our expected hand value is below the threshold."""
-        return self.belief.expected_hand_value(self.player_idx) < KNOCK_THRESHOLD
+    def _should_knock(self):
+        ev = self.belief.expected_hand_value(self.player_idx)
+        print(f"  _should_knock: player={self.player_idx} EV={ev:.1f} threshold={KNOCK_THRESHOLD}")
+        return ev < KNOCK_THRESHOLD
+    
+    def _best_peek_action(self, actions) -> Action:
+        """Peek at the opponent's unknown slot with the highest expected value.
+        Falls back to any peek if no unknown opponent slots exist.
+        """
+        opponent_idx = 1 - self.player_idx
 
+        # Find peek actions targeting unknown opponent slots, ranked by expected value
+        best_action = None
+        best_ev = -1
+
+        for action in actions:
+            if action.action_type != ActionType.PEEK:
+                continue
+            if action.target_player != opponent_idx:
+                continue
+            if self.belief.get_known(opponent_idx, action.target_idx) is not None:
+                continue  # already known, no new info
+
+            slot_ev = self.belief.slot_expected_value(opponent_idx, action.target_idx)
+            if slot_ev > best_ev:
+                best_ev = slot_ev
+                best_action = action
+
+        # Fallback: peek at anything if all opponent slots are known
+        if best_action is None:
+            best_action = next(a for a in actions if a.action_type == ActionType.PEEK)
+
+        return best_action
 

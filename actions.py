@@ -308,9 +308,9 @@ class Action:
         # For humans, phase stays the same - they click "done" button to advance
 
     def _execute_done_peeking(self, game, GamePhase):
-        """Finish peeking phase and move to next phase."""
         game.peeked_card = None
-        
-        if game.state.phase == GamePhase.VENDETTA_PEEK:
+        if game.state.phase == GamePhase.STOOL_PIGEON_PEEK:
+            game.state.pending_effect = None
+            game.state.set_phase(GamePhase.DECIDE)  
+        elif game.state.phase == GamePhase.VENDETTA_PEEK:
             game.state.set_phase(GamePhase.VENDETTA_SWAP)
-            print("Done peeking. Now swap any two cards.")
