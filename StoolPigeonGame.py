@@ -60,9 +60,6 @@ class StoolPigeonGame:
         self.agent = None
         self.agent_delay = render_delay_sec 
 
-        if agent_class is not None:
-            self.agent = agent_class(self, player_idx=1)
-
         # Card tracking
         self.peeked_card = None
         self.bamboozle_first_card = None
@@ -76,6 +73,9 @@ class StoolPigeonGame:
         self.end_screen = None
 
         self._setup_game()
+
+        if agent_class is not None:
+            self.agent = agent_class(self, player_idx=1)
 
         if self.GUI:
             pygame.init()
@@ -805,9 +805,15 @@ if __name__ == "__main__":
         print(f"\nAction: {action.action_type.name}")
         action.execute_action(game, type(game.state.phase))
 
-        obs = game.agent.get_observations()
-        for o in obs:
-            print(f"  OBS: {o.obs_type.name} card={o.card} player={o.player} slot={o.slot}")
+        if game.state.is_agent_turn():
+            action = game.agent.choose_action()
+            print(f"Phase: {game.state.phase.name} | EV: {game.agent.belief.expected_hand_value(1):.1f} | Action: {action.action_type.name}")
+            action.execute_action(game, GamePhase, agent=True)
+        else:
+            actions = game.get_legal_actions()
+            action = random.choice(actions)
+            print(f"Phase: {game.state.phase.name} | Action: {action.action_type.name} (random)")
+            action.execute_action(game, GamePhase)
 
     # game = StoolPigeonGame(GUI=True, render_delay_sec=1.5, agent_class=RandomAgent)
     # game._main()
