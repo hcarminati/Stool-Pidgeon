@@ -57,6 +57,10 @@ class BasicPOMDPAgent:
                 return keep
             if ActionType.DISCARD_DRAWN in action_types:
                 return next(a for a in actions if a.action_type == ActionType.DISCARD_DRAWN)
+            
+        # Kingpin: eliminate own highest slot or add to opponent
+        if ActionType.KINGPIN_ELIMINATE in action_types or ActionType.KINGPIN_ADD in action_types:
+            return self._best_kingpin_action(actions)
 
         print(f"Known: {[(k,v.value) for k,v in self.belief._known.items() if v is not None]}")
 
@@ -119,6 +123,44 @@ class BasicPOMDPAgent:
             new_ev = current_ev - slot_ev + drawn_card.value
             if new_ev < best_ev:
                 best_ev = new_ev
+                best_action = action
+
+        return best_action
+
+    def _best_kingpin_action(self, actions) -> Action:
+        """
+        If opponent is winning (lower EV), add unknown card to burden them.
+        Prioritize removing rat cards if the agent knows they have one. 
+        Otherwise eliminate own highest expected value slot.
+        """
+        opponent_idx = 1 - self.player_idx
+        own_ev = self.belief.expected_hand_value(self.player_idx)
+        opp_ev = self.belief.expected_hand_value(opponent_idx)
+
+        # Add to opponent if they're winning and add action is available
+        if opp_ev < own_ev:
+            add = next((a for a in actions if a.action_type == ActionType.KINGPIN_ADD), None)
+            if add:
+                return add
+
+        # Eliminate own highest expected value slot
+        # Priority: eliminate known RAT first (15 pts, can only be removed by Kingpin)
+        for action in actions:
+            if action.action_type != ActionType.KINGPIN_ELIMINATE:
+                continue
+            known = self.belief.get_known(self.player_idx, action.target_idx)
+            if known and known.card_type == CardType.RAT:
+                return action
+
+        # Remove highest card from own
+        best_action = None
+        best_ev = -1
+        for action in actions:
+            if action.action_type != ActionType.KINGPIN_ELIMINATE:
+                continue
+            slot_ev = self.belief.slot_expected_value(self.player_idx, action.target_idx)
+            if slot_ev > best_ev:
+                best_ev = slot_ev
                 best_action = action
 
         return best_action
