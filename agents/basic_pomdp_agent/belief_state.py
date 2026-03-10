@@ -62,10 +62,11 @@ class BeliefState:
         for key, known_card in self._known.items():
             if known_card is card:
                 self._known[key] = None
-                return 
-        self._unknown[(card.card_type, card.value)] = max(
-            0, self._unknown[(card.card_type, card.value)] - 1
-        )
+                return  # was known - pool already didn't count it
+
+        k = (card.card_type, card.value)
+        if self._unknown[k] > 0:  # only remove if still in pool
+            self._unknown[k] -= 1
 
     def mark_unknown(self, player, slot):
         """Slot is no longer certain, add its card back into the unknown pool."""
