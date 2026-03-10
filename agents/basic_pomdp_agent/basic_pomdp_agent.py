@@ -49,6 +49,14 @@ class BasicPOMDPAgent:
         if ActionType.DONE_PEEKING in action_types:
             self._peeked_this_turn = False
             return next(a for a in actions if a.action_type == ActionType.DONE_PEEKING)
+    
+        # Keep drawn card if it improves hand, otherwise discard
+        if ActionType.KEEP_CARD in action_types:
+            keep = self._best_keep_action(actions)
+            if keep:
+                return keep
+            if ActionType.DISCARD_DRAWN in action_types:
+                return next(a for a in actions if a.action_type == ActionType.DISCARD_DRAWN)
 
         print(f"Known: {[(k,v.value) for k,v in self.belief._known.items() if v is not None]}")
 
@@ -89,3 +97,28 @@ class BasicPOMDPAgent:
 
         return best_action
 
+    def _best_keep_action(self, actions) -> Action | None:
+        """
+        Return the keep action that most reduces expected hand value,
+        or None if no keep improves the hand.
+        Keeping drawn card is worth it if drawn_card.value < slot_expected_value.
+        """
+        drawn_card = self.game.state.drawn_card
+        if drawn_card is None:
+            return None
+
+        current_ev = self.belief.expected_hand_value(self.player_idx)
+        best_action = None
+        best_ev = current_ev  # only keep if it strictly improves
+
+        for action in actions:
+            if action.action_type != ActionType.KEEP_CARD:
+                continue
+
+            slot_ev = self.belief.slot_expected_value(self.player_idx, action.target_idx)
+            new_ev = current_ev - slot_ev + drawn_card.value
+            if new_ev < best_ev:
+                best_ev = new_ev
+                best_action = action
+
+        return best_action
