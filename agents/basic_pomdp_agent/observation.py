@@ -27,3 +27,30 @@ class Observation:
     s1:     int    = None  # swap: source slot
     p2:     int    = None  # swap: dest player
     s2:     int    = None  # swap: dest slot
+
+    def update_belief(self, belief):
+        """Apply this observation to the belief state."""
+
+        if self.obs_type == ObsType.PLAYER_DISCARD:
+            belief.mark_removed(self.card)
+        
+        elif self.obs_type == ObsType.PLAYER_DRAW_DISCARD:
+            belief.mark_removed(self.card)
+
+        elif self.obs_type == ObsType.PLAYER_KEEP:
+            belief.mark_removed(self.card)
+
+        elif self.obs_type == ObsType.AGENT_KEEP:
+            belief.mark_removed(self.card) # old card discarded
+            belief.mark_known(self.player, self.slot, self.card2) # drawn card placed
+
+        elif self.obs_type == ObsType.AGENT_PEEK:
+            belief.mark_known(self.player, self.slot, self.card)
+
+        elif self.obs_type in (ObsType.AGENT_SWAP, ObsType.PLAYER_SWAP):
+            belief.after_swap(self.p1, self.s1, self.p2, self.s2)
+
+        elif self.obs_type == ObsType.KINGPIN_ELIMINATE:
+            belief.mark_removed(self.card)
+
+        # AGENT_DRAW_PILE, KINGPIN_ADD, KNOCK — no card info to update

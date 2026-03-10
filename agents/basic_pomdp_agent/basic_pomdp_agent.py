@@ -23,6 +23,10 @@ class BasicPOMDPAgent:
     def choose_action(self) -> Action:
         # TODO: Change later.
         """Random action for now..."""
+
+        for obs in self.get_observations():
+            obs.update_belief(self.belief)
+
         actions = self.game.get_legal_actions()
         if actions:
             return random.choice(actions)

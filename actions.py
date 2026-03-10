@@ -172,9 +172,11 @@ class Action:
         if hasattr(game.agent, 'observe'):
             obs_type = ObsType.AGENT_KEEP if game.state.is_agent_turn() else ObsType.PLAYER_KEEP
             game.agent.observe(Observation(obs_type,
-                                        card=old_card,
+                                        card=old_card, # discarded
+                                        card2=game.state.drawn_card, # kept
                                         player=game.state.current_player_idx,
                                         slot=self.target_idx))
+
 
         game.state.drawn_card = None
         game.state.next_turn()
