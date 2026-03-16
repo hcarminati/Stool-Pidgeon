@@ -5,8 +5,11 @@ from agents.random_agent import RandomAgent
 from game_state import GamePhase
 import os
 import sys
+import numpy as np
 
 num_games = 20000
+ev_errors = []
+
 sys.stdout = open(os.devnull, 'w') 
 
 def play_game():
@@ -25,6 +28,10 @@ def play_game():
             if game.state.phase == GamePhase.GAME_OVER:
                 break
 
+    predicted_ev = game.agent.belief.expected_hand_value(1)
+    actual_score = sum(c.value for c in game.agent_hands if c is not None)
+    ev_errors.append(predicted_ev - actual_score)
+
     return game.get_scores()
 
 wins = {"agent": 0, "user": 0, "tie": 0}
@@ -37,3 +44,15 @@ sys.stdout = sys.__stdout__
 print(f"POMDP wins: {wins['agent']}/{num_games}")
 print(f"Random wins: {wins['user']}/{num_games}")
 print(f"Ties: {wins['tie']}/{num_games}")
+
+# avg signed error
+# + = overestimate
+# - = underestimate
+# near 0 = unbiased
+print(f"EV mean error: {np.mean(ev_errors):.2f}")
+# spread of errors
+# high = some games very accurate, others way off
+print(f"EV std error:  {np.std(ev_errors):.2f}") 
+# avg magnitude of error ignoring sign
+# typical accuracy in points 
+print(f"EV MAE:        {np.mean(np.abs(ev_errors)):.2f}") 
