@@ -61,6 +61,10 @@ class BasicPOMDPAgent:
         # Kingpin: eliminate own highest slot or add to opponent
         if ActionType.KINGPIN_ELIMINATE in action_types or ActionType.KINGPIN_ADD in action_types:
             return self._best_kingpin_action(actions)
+        
+        # Swap: move high own value to opponent, bring low opponent value to own hand
+        if ActionType.SWAP in action_types:
+            return self._best_swap_action(actions)
 
         print(f"Known: {[(k,v.value) for k,v in self.belief._known.items() if v is not None]}")
 
@@ -124,6 +128,45 @@ class BasicPOMDPAgent:
             if new_ev < best_ev:
                 best_ev = new_ev
                 best_action = action
+
+        return best_action
+    
+    def _best_swap_action(self, actions) -> Action:
+        """
+        Pick the swap that maximises (own_slot_ev - opponent_slot_ev).
+        Positive delta means we're moving high value out and bringing low value in.
+        If no swap improves things, pick the least harmful one since swap is mandatory.
+        """
+        opponent_idx = 1 - self.player_idx
+        best_action = None
+        best_delta = float('-inf')
+
+        for action in actions:
+            if action.action_type != ActionType.SWAP:
+                continue
+
+            p1, s1 = action.target_player, action.target_idx
+            p2, s2 = action.second_target
+
+            # Determine which slot is ours and which is opponent's
+            if p1 == self.player_idx and p2 == opponent_idx:
+                own_ev = self.belief.slot_expected_value(p1, s1)
+                opp_ev = self.belief.slot_expected_value(p2, s2)
+            elif p2 == self.player_idx and p1 == opponent_idx:
+                own_ev = self.belief.slot_expected_value(p2, s2)
+                opp_ev = self.belief.slot_expected_value(p1, s1)
+            else:
+                # Both slots same player, skip
+                continue
+
+            delta = own_ev - opp_ev
+            if delta > best_delta:
+                best_delta = delta
+                best_action = action
+
+        # Fallback: any swap (e.g. both slots same player, mandatory swap)
+        if best_action is None:
+            best_action = next(a for a in actions if a.action_type == ActionType.SWAP)
 
         return best_action
 
