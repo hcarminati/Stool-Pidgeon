@@ -642,10 +642,9 @@ class StoolPigeonGame:
             # Can swap any two cards on the table
             all_positions = []
             for i, card in enumerate(self.get_current_hand()):
-                if card is not None:
+                if card is not None and card.card_type != CardType.RAT:
                     all_positions.append((current_player, i))
             for i, card in enumerate(self.get_opponent_hand()):
-                if card is not None:
                     all_positions.append((opponent, i))
             # Generate all possible pairs
             for idx, (p1, c1) in enumerate(all_positions):
@@ -657,10 +656,10 @@ class StoolPigeonGame:
         elif self.state.phase == GamePhase.VENDETTA_PEEK:
             # Can peek at any card
             for i, card in enumerate(self.get_current_hand()):
-                if card is not None:
+                if card is not None and card.card_type != CardType.RAT:
                     actions.append(Action.peek(current_player, i))
             for i, card in enumerate(self.get_opponent_hand()):
-                if card is not None:
+                if card is not None and card.card_type != CardType.RAT:
                     actions.append(Action.peek(opponent, i))
             actions.append(Action.done_peeking())
 
