@@ -150,5 +150,4 @@ class EndScreen:
             screen.blit(label, label.get_rect(centerx=cx + self.CARD_W // 2, y=y))
 
             card.draw(screen, (cx, y + 18),
-                      self.rule_font, self.tiny_font,
                       mouse_pos=None, face_up=True, is_user_turn=False)

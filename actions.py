@@ -93,6 +93,10 @@ class Action:
 
     def _execute_draw_from_pile(self, game, GamePhase, agent=False):
         """Draw a card from the draw pile."""
+
+        if not game.draw_pile:
+            if not game._reshuffle_discard_into_draw():
+                return  # truly no cards left
         card = game.draw_pile.pop()
         game.state.drawn_card = card
         game.state.set_phase(GamePhase.DECIDE)
@@ -193,7 +197,8 @@ class Action:
 
     def _execute_knock(self, game):
         """Execute knock action."""
-        game.state.handle_knock()
+        if game.state.handle_knock():
+            game.state.next_turn()
         # game.state.next_turn()
         if hasattr(game.agent, 'observe'):
             game.agent.observe(Observation(ObsType.KNOCK, player=game.state.current_player_idx))
@@ -268,7 +273,11 @@ class Action:
 
         new_card = game.draw_pile.pop()
         opponent_hand = game.get_opponent_hand()
-        opponent_hand.append(new_card)
+        try:
+            idx = opponent_hand.index(None)
+            opponent_hand[idx] = new_card
+        except ValueError:
+            opponent_hand.append(new_card)
 
         if hasattr(game.agent, 'observe'):
             game.agent.observe(Observation(ObsType.KINGPIN_ADD, player=self.target_player))

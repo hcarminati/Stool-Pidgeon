@@ -5,7 +5,7 @@ from cards import CardType, Card
 from button import Button 
 from game_state import GameState, GamePhase
 from actions import Action
-# from agents.random_agent import RandomAgent
+from agents.random_agent import RandomAgent
 from title_screen import TitleScreen
 from end_screen import EndScreen, calculate_score
 from agents.basic_pomdp_agent.basic_pomdp_agent import BasicPOMDPAgent
@@ -191,7 +191,7 @@ class StoolPigeonGame:
         if self.state.phase in show_phases:
             drawn_label = self.tinyFont.render("You drew:", True, self.white)
             self.screen.blit(drawn_label, (600, 270))
-            self.state.drawn_card.draw(self.screen, (600, 300), self.font, self.tinyFont,
+            self.state.drawn_card.draw(self.screen, (600, 300),
                                       active_mouse, face_up=True, is_user_turn=is_user_turn)
             self.state.drawn_card.disable()
 
@@ -222,7 +222,7 @@ class StoolPigeonGame:
                 top_card.disable()
             else:
                 top_card.enable()
-            top_card.draw(self.screen, (350, 300), self.font, self.tinyFont, 
+            top_card.draw(self.screen, (350, 300),
                          active_mouse, face_up=False, is_user_turn=is_user_turn)
             self.draw_pile_rect = top_card.rect
         else:
@@ -235,7 +235,7 @@ class StoolPigeonGame:
 
         if self.discard_pile:
             top_card = self.discard_pile[-1]
-            top_card.draw(self.screen, (475, 300), self.font, self.tinyFont,
+            top_card.draw(self.screen, (475, 300),
                          active_mouse, face_up=True, is_user_turn=is_user_turn)
             self.discard_pile_rect = top_card.rect
 
@@ -259,7 +259,7 @@ class StoolPigeonGame:
             pos = self._get_card_position(i, is_bottom_row=True)
             face_up = self._should_show_card_face_up(i, player_idx=0)
 
-            card.draw(self.screen, pos, self.font, self.tinyFont, active_mouse,
+            card.draw(self.screen, pos, active_mouse,
                      face_up=face_up, is_user_turn=is_user_turn)
 
             self._highlight_selected_card(card, i, player_idx=0)
@@ -274,7 +274,7 @@ class StoolPigeonGame:
             pos = self._get_card_position(i, is_bottom_row=False)
             face_up = self._should_show_card_face_up(i, player_idx=1)
 
-            card.draw(self.screen, pos, self.font, self.tinyFont, active_mouse,
+            card.draw(self.screen, pos, active_mouse,
                      face_up=face_up, is_user_turn=is_user_turn)
 
             self._highlight_selected_card(card, i, player_idx=1)
@@ -645,13 +645,17 @@ class StoolPigeonGame:
                 if card is not None and card.card_type != CardType.RAT:
                     all_positions.append((current_player, i))
             for i, card in enumerate(self.get_opponent_hand()):
+                if card is not None and card.card_type != CardType.RAT:
                     all_positions.append((opponent, i))
             # Generate all possible pairs
-            for idx, (p1, c1) in enumerate(all_positions):
-                for p2, c2 in all_positions[idx+1:]:
-                    actions.append(Action.swap(p1, c1, p2, c2))
+            if len(all_positions) >= 2:
+                for idx, (p1, c1) in enumerate(all_positions):
+                    for p2, c2 in all_positions[idx+1:]:
+                        actions.append(Action.swap(p1, c1, p2, c2))
+            else:
+                actions.append(Action.discard_drawn())
             # Can skip (just discard the Bamboozle)
-            actions.append(Action.discard_drawn())
+            # actions.append(Action.discard_drawn())
 
         elif self.state.phase == GamePhase.VENDETTA_PEEK:
             # Can peek at any card
@@ -672,11 +676,14 @@ class StoolPigeonGame:
             for i, card in enumerate(self.get_opponent_hand()):
                 if card is not None:
                     all_positions.append((opponent, i))
-            for idx, (p1, c1) in enumerate(all_positions):
-                for p2, c2 in all_positions[idx+1:]:
-                    actions.append(Action.swap(p1, c1, p2, c2))
+            if len(all_positions) >= 2:
+                for idx, (p1, c1) in enumerate(all_positions):
+                    for p2, c2 in all_positions[idx+1:]:
+                        actions.append(Action.swap(p1, c1, p2, c2))
+            else:
+                actions.append(Action.discard_drawn())
             # Can skip
-            actions.append(Action.discard_drawn())
+            # actions.append(Action.discard_drawn())
 
         elif self.state.phase == GamePhase.KINGPIN_CHOOSE:
             # Can eliminate any of own cards
@@ -728,6 +735,18 @@ class StoolPigeonGame:
             deck.append(Card(CardType.MEATBALL))
 
         return deck
+    
+    def _reshuffle_discard_into_draw(self):
+        """Reshuffle the discard pile into the draw pile, keeping the top discard card."""
+        if len(self.discard_pile) <= 1:
+            print("WARNING: Not enough cards to reshuffle!")
+            return False
+        top_card = self.discard_pile.pop()          # keep top card visible
+        self.draw_pile = self.discard_pile          # old discards become new draw pile
+        random.shuffle(self.draw_pile)
+        self.discard_pile = [top_card]              # reset discard to just the top card
+        print(f"Reshuffled discard pile into draw pile ({len(self.draw_pile)} cards).")
+        return True
 
     def _setup_game(self):
         """Initialize game state: create deck, shuffle, and deal."""
@@ -795,27 +814,24 @@ if __name__ == "__main__":
     # Play against random agent
 
     game = StoolPigeonGame(GUI=True, render_delay_sec=1.5, agent_class=BasicPOMDPAgent)
-    game.state.set_phase(GamePhase.DRAW)
-    for _ in range(10):
-        if game.state.phase.name == "GAME_OVER":
-            break
+    game._main()
+    
+    # game.state.set_phase(GamePhase.DRAW)
+    # for _ in range(10):
+    #     if game.state.phase.name == "GAME_OVER":
+    #         break
 
-        action = game.agent.choose_action()
-        print(f"\nAction: {action.action_type.name}")
-        action.execute_action(game, type(game.state.phase))
+    #     action = game.agent.choose_action()
+    #     print(f"\nAction: {action.action_type.name}")
+    #     action.execute_action(game, type(game.state.phase))
 
-        if game.state.is_agent_turn():
-            action = game.agent.choose_action()
-            print(f"Phase: {game.state.phase.name} | EV: {game.agent.belief.expected_hand_value(1):.1f} | Action: {action.action_type.name}")
-            action.execute_action(game, GamePhase, agent=True)
-        else:
-            actions = game.get_legal_actions()
-            action = random.choice(actions)
-            print(f"Phase: {game.state.phase.name} | Action: {action.action_type.name} (random)")
-            action.execute_action(game, GamePhase)
+    #     obs = game.agent.get_observations()
+    #     for o in obs:
+    #         print(f"  OBS: {o.obs_type.name} card={o.card} player={o.player} slot={o.slot}")
 
     # game = StoolPigeonGame(GUI=True, render_delay_sec=1.5, agent_class=RandomAgent)
     # game._main()
 
     # game = StoolPigeonGame(GUI=True, render_delay_sec=0.1)
     # game._main()
+

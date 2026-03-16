@@ -20,6 +20,7 @@ class BeliefState:
 
     def __init__(self, game):
         # counts of unknown cards
+        self.game = game
         self._unknown = Counter((card.card_type, card.value) for card in game._create_deck())
 
         # All slots start unknown at first
@@ -34,8 +35,8 @@ class BeliefState:
             if slot < len(game.agent_hands) and game.agent_hands[slot] is not None:
                 self.mark_known(1, slot, game.agent_hands[slot])
 
-    def get_known(self, opponent_idx, action):
-        return self._known.get((opponent_idx, action.target_idx))
+    def get_known(self, player, slot):
+        return self._known.get((player, slot))
 
     def probability(self, card):
         """P(a random unknown card == this type) under the uniform prior."""
@@ -117,10 +118,12 @@ class BeliefState:
         """ Expected total hand value for a player, sum across all slots.
         Lower is better. Agent uses this to decide whether to knock.
         """
+        hand = self.game.agent_hands if player == 1 else self.game.user_hand
+
         total = 0.0
 
         for (p, s) in self._known:
-            if p == player:
+             if p == player and s < len(hand) and hand[s] is not None:
                 total += self.slot_expected_value(player, s)
 
         return total

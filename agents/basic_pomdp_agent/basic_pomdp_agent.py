@@ -1,7 +1,7 @@
 import random
 from actions import Action, ActionType
 from agents.basic_pomdp_agent.belief_state import BeliefState
-from agents.basic_pomdp_agent.observation import Observation
+from cards import CardType
 
 # Knock if expected hand value is below this threshold
 KNOCK_THRESHOLD = 15
@@ -206,4 +206,6 @@ class BasicPOMDPAgent:
                 best_ev = slot_ev
                 best_action = action
 
+        if best_action is None:
+            return next(a for a in actions if a.action_type == ActionType.KINGPIN_ADD)
         return best_action
