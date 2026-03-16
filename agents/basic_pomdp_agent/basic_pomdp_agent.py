@@ -1,4 +1,3 @@
-import random
 from actions import Action, ActionType
 from agents.basic_pomdp_agent.belief_state import BeliefState
 from cards import CardType
