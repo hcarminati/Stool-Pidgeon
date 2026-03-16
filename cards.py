@@ -3,6 +3,7 @@ from enum import Enum, auto
 
 # Define all card types available in the game
 class CardType(Enum):
+    """Card types."""
     NUMBERED = auto()       # Regular numbered cards (1 - 9)
     STOOL_PIGEON = auto()   # Action: Peek at any face-down card
     BAMBOOZLE = auto()      # Action: Swap any two face-down cards
@@ -11,7 +12,8 @@ class CardType(Enum):
     RAT = auto()            # Special: Cannot be removed except by Kingpin
     MEATBALL = auto()       # Special: Value = 0
 
-class Card: 
+class Card:
+    """Handles rendering and actions on cards."""
     # Card dimensions in pixels
     CARD_WIDTH = 65
     CARD_HEIGHT = 90
@@ -24,37 +26,45 @@ class Card:
         CardType.RAT: "images/rat.png",
         CardType.MEATBALL: "images/meatball.png",
     }
-    
+
     # RGB colors for each card type (used when drawing face-up)
     CARD_COLORS = {
-        CardType.NUMBERED: (125, 124, 122), 
-        CardType.STOOL_PIGEON: (18, 13, 49), 
-        CardType.BAMBOOZLE: (108, 207, 39), 
-        CardType.VENDETTA: (69, 74, 222), 
+        CardType.NUMBERED: (125, 124, 122),
+        CardType.STOOL_PIGEON: (18, 13, 49),
+        CardType.BAMBOOZLE: (108, 207, 39),
+        CardType.VENDETTA: (69, 74, 222),
         CardType.KINGPIN: (216, 160, 65),
-        CardType.RAT: (250, 153, 0), 
-        CardType.MEATBALL: (49, 37, 9) 
+        CardType.RAT: (250, 153, 0),
+        CardType.MEATBALL: (49, 37, 9)
+    }
+
+    CARD_VALUES = {
+        CardType.STOOL_PIGEON: 10,
+        CardType.BAMBOOZLE:    10,
+        CardType.VENDETTA:     10,
+        CardType.KINGPIN:      10,
+        CardType.RAT:          15,
+        CardType.MEATBALL:      0,
     }
 
         # card_type: The CardType enum value (e.g., NUMBERED, STOOL_PIGEON)
-        # value: Only used for NUMBERED cards (2-10)
     def __init__(self, card_type, value=None, clickable=True):
         self.card_type = card_type
-        self.value = value
+        self.value = value if card_type == CardType.NUMBERED else self.CARD_VALUES[card_type]
         self.face_up = False  # Default to face-down
         self.rect = None  # Updated when drawn; used for click detection
         self.clickable = clickable
 
     def get_image_file(self):
         """Return the image file path for this card, if it has one."""
-        if self.card_type == CardType.NUMBERED: 
+        if self.card_type == CardType.NUMBERED:
             return f'images/witness-{self.value}.png'
         return self.IMAGE_FILES.get(self.card_type, None)
 
     def enable(self):
         """Make the card clickable."""
         self.clickable = True
-    
+
     def disable(self):
         """Make the card non-clickable (no hover effect, ignored by clicks)."""
         self.clickable = False
@@ -66,8 +76,8 @@ class Card:
     def contains(self, pos):
         """Check if a position (e.g., mouse click) is inside the card."""
         return self.is_clickable and self.rect.collidepoint(pos)
-    
-    def draw(self, screen, position, font, small_font, mouse_pos=None, face_up=None, is_user_turn=None):
+
+    def draw(self, screen, position, mouse_pos=None, face_up=None, is_user_turn=None):
         """
         Draw this card on the screen at the given position.
         """
@@ -88,7 +98,7 @@ class Card:
         image = self.get_image_file()
         if image:
             try:
-                # If image 
+                # If image
                 card_image = pygame.image.load(image)
                 card_image = pygame.transform.scale(card_image, (self.CARD_WIDTH, self.CARD_HEIGHT))
                 screen.blit(card_image, self.rect)
@@ -97,16 +107,17 @@ class Card:
                 pygame.draw.rect(screen, card_color, self.rect)
         else:
             pygame.draw.rect(screen, card_color, self.rect)
-    
+
         # Hover effect: brighten color if mouse is over this card
         if is_user_turn and self.clickable and mouse_pos and self.rect.collidepoint(mouse_pos):
             pygame.draw.rect(screen, (255, 255, 255), self.rect, 3)
-            
+
     def _draw_face_down(self, screen, position, mouse_pos, is_user_turn):
         """Draw the back of the card (generic purple/blue design for hidden cards)."""
         try:
             cardback_image = pygame.image.load("images/cardback.png")
-            cardback_image = pygame.transform.scale(cardback_image, (self.CARD_WIDTH, self.CARD_HEIGHT))
+            cardback_image = pygame.transform.scale(cardback_image,
+                                                    (self.CARD_WIDTH, self.CARD_HEIGHT))
             screen.blit(cardback_image, self.rect)
         except pygame.error:
             pygame.draw.rect(screen, (100, 70, 120), self.rect)

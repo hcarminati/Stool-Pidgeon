@@ -1,27 +1,18 @@
 import pygame
-from cards import CardType
 from button import Button
 
-CARD_SCORES = {
-    CardType.MEATBALL:      0,
-    CardType.STOOL_PIGEON: 10,
-    CardType.BAMBOOZLE:    10,
-    CardType.VENDETTA:     10,
-    CardType.KINGPIN:      10,
-    CardType.RAT:          15,
-}
-
 def calculate_score(hand: list) -> int:
+    """Calculates each player's score."""
     total = 0
     for card in hand:
         if card is None:
             continue
-        total += card.value if card.card_type == CardType.NUMBERED \
-                 else CARD_SCORES.get(card.card_type, 10)
+        total += card.value
     return total
 
 
 class EndScreen:
+    """Handles the end screen rendering and clicking."""
     CARD_W, CARD_H = 65, 90
     GAP = 12
 
@@ -57,6 +48,7 @@ class EndScreen:
         )
 
     def render(self, screen, user_hand: list, agent_hand: list, mouse_pos=None):
+        """Renders the end screen."""
         user_score  = calculate_score(user_hand)
         agent_score = calculate_score(agent_hand)
 
@@ -71,7 +63,7 @@ class EndScreen:
         screen.blit(title_surf, title_surf.get_rect(
             center=(self.screen_width // 2, 72)))
 
-        # Main panel 
+        # Main panel
         panel = pygame.Rect(30, 150, self.screen_width - 60, 390)
         pygame.draw.rect(screen, (40, 38, 60), panel, border_radius=8)
         pygame.draw.rect(screen, (70, 65, 100), panel, 1, border_radius=8)
@@ -119,15 +111,19 @@ class EndScreen:
         self.new_game_btn.draw(screen, mouse_pos)
 
     def handle_click(self, pos) -> bool:
+        """Handles clicking the new game button."""
         return self.new_game_btn.contains(pos)
 
     # Helpers
 
     def _draw_section(self, screen, heading, lines, x, y, width):
         # Faint highlight bar behind the heading
-        bar = pygame.Surface((width, 22), pygame.SRCALPHA)
-        pygame.draw.rect(bar, (*self.red_orange, 55), bar.get_rect(), border_radius=4)
-        screen.blit(bar, (x, y))
+        hghlght_bar = pygame.Surface((width, 22), pygame.SRCALPHA)
+        pygame.draw.rect(hghlght_bar,
+                         (*self.red_orange, 55),
+                         hghlght_bar.get_rect(),
+                         border_radius=4)
+        screen.blit(hghlght_bar, (x, y))
 
         heading_surf = self.section_font.render(heading, True, self.red_orange)
         screen.blit(heading_surf, (x + 6, y + 2))
@@ -147,13 +143,11 @@ class EndScreen:
 
         for i, card in enumerate(active):
             cx = start_x + i * (self.CARD_W + self.GAP)
-            pts = card.value if card.card_type == CardType.NUMBERED \
-                  else CARD_SCORES.get(card.card_type, 10)
+            pts = card.value
 
             # +N label
             label = self.tiny_font.render(f"+{pts}", True, self.muted)
             screen.blit(label, label.get_rect(centerx=cx + self.CARD_W // 2, y=y))
 
             card.draw(screen, (cx, y + 18),
-                      self.rule_font, self.tiny_font,
                       mouse_pos=None, face_up=True, is_user_turn=False)

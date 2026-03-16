@@ -1,8 +1,8 @@
 import pygame
 from button import Button
 
-
 class TitleScreen:
+    """Start screen."""
     def __init__(self, screen_width, screen_height):
         self.screen_width = screen_width
         self.screen_height = screen_height
@@ -28,7 +28,9 @@ class TitleScreen:
         self.hint_font = pygame.font.Font(None, 20)
 
         # Start Button
-        self.start_button = Button((screen_width // 2 - 50, 598), 100, 50, 'images/start-button.png')
+        self.start_button = Button((screen_width // 2 - 50, 598),
+                                   100, 50,
+                                   'images/start-button.png')
 
         # Left column rule sections
         self.left_sections = [
@@ -70,9 +72,12 @@ class TitleScreen:
 
     def _draw_section(self, screen, heading, lines, x, y, width):
         # Faint highlight bar behind the heading
-        bar = pygame.Surface((width, 22), pygame.SRCALPHA)
-        pygame.draw.rect(bar, (*self.red_orange, 55), bar.get_rect(), border_radius=4)
-        screen.blit(bar, (x, y))
+        hghlght_bar = pygame.Surface((width, 22), pygame.SRCALPHA)
+        pygame.draw.rect(hghlght_bar,
+                         (*self.red_orange, 55),
+                         hghlght_bar.get_rect(),
+                         border_radius=4)
+        screen.blit(hghlght_bar, (x, y))
 
         heading_surf = self.section_font.render(heading, True, self.red_orange)
         screen.blit(heading_surf, (x + 6, y + 2))
@@ -85,6 +90,7 @@ class TitleScreen:
         return y + 10
 
     def render(self, screen, active_mouse):
+        """Renders title screen."""
         # Background
         if self.background:
             screen.blit(self.background, (0, 0))
@@ -127,4 +133,5 @@ class TitleScreen:
         self.start_button.draw(screen, active_mouse)
 
     def handle_click(self, pos):
+        """Handles clicking start button."""
         return self.start_button.contains(pos)
