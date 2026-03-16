@@ -68,7 +68,11 @@ class BasicPOMDPAgent:
 
         print(f"Known: {[(k,v.value) for k,v in self.belief._known.items() if v is not None]}")
 
-        return random.choice(actions)
+        # Draw: prefer discard pile if top card is known and low value
+        if ActionType.DRAW_FROM_DISCARD in action_types or ActionType.DRAW_FROM_PILE in action_types:
+            return self._best_draw_action(actions)
+
+        return actions[0]
 
     # Decision Helpers
     def _should_knock(self):
@@ -209,3 +213,17 @@ class BasicPOMDPAgent:
         if best_action is None:
             return next(a for a in actions if a.action_type == ActionType.KINGPIN_ADD)
         return best_action
+
+    def _best_draw_action(self, actions):
+        """Prefer drawing from discard if the top card improves the hand."""
+        if ActionType.DRAW_FROM_DISCARD in [a.action_type for a in actions]:
+            top = self.game.discard_pile[-1] if self.game.discard_pile else None
+            if top and top.value is not None:
+                # The highest expected value slot in the agent's hand
+                worst_slot_ev = max(
+                    self.belief.slot_expected_value(self.player_idx, i)
+                    for i, c in enumerate(self.game.agent_hands) if c is not None
+                )
+                if top.value < worst_slot_ev:
+                    return next(a for a in actions if a.action_type == ActionType.DRAW_FROM_DISCARD)
+        return next(a for a in actions if a.action_type == ActionType.DRAW_FROM_PILE)

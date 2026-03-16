@@ -6,7 +6,7 @@ from game_state import GamePhase
 import os
 import sys
 
-num_games = 10500
+num_games = 20000
 sys.stdout = open(os.devnull, 'w') 
 
 def play_game():
