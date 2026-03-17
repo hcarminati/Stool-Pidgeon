@@ -809,6 +809,38 @@ class StoolPigeonGame:
         if self.GUI:
             self._loop_gui()
 
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        new = cls.__new__(cls)
+        memo[id(self)] = new
+
+        import copy
+
+        # Only copy what the simulation actually needs
+        new.draw_pile    = copy.deepcopy(self.draw_pile, memo)
+        new.discard_pile = copy.deepcopy(self.discard_pile, memo)
+        new.agent_hands  = copy.deepcopy(self.agent_hands, memo)
+        new.user_hand    = copy.deepcopy(self.user_hand, memo)
+        new.state        = copy.deepcopy(self.state, memo)
+
+        # Simulation config — no copy needed, just reference or set directly
+        new.GUI          = False
+        new.agent        = None
+        new.peeked_card  = None
+        new.bamboozle_first_card = None
+        new.vendetta_first_card  = None
+        new.error_message        = None
+        new.error_message_timer  = 0
+
+        # Set everything else to None — simulation never touches these
+        for attr in ['screen', 'background', 'background_user', 'background_agent',
+                    'font', 'tinyFont', 'knock_button', 'done_button',
+                    'eliminate_button', 'add_button', 'title_screen', 'end_screen',
+                    'knock_button_rect', 'done_button_rect', 'eliminate_button_rect',
+                    'add_button_rect', 'draw_pile_rect', 'discard_pile_rect']:
+            setattr(new, attr, None)
+
+        return new
 
 if __name__ == "__main__":
     # Play against random agent

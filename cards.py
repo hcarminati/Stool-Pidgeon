@@ -126,3 +126,10 @@ class Card:
         # Hover highlight: show white border if mouse is over this card
         if is_user_turn and self.clickable and mouse_pos and self.rect.collidepoint(mouse_pos):
             pygame.draw.rect(screen, (255, 255, 255), self.rect, 3)
+
+    def __deepcopy__(self, memo):
+        new = Card(self.card_type, self.value if self.card_type == CardType.NUMBERED else None)
+        new.face_up = self.face_up
+        new.clickable = self.clickable
+        new.rect = None  # simulation never renders
+        return new
