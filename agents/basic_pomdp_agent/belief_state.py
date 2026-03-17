@@ -1,4 +1,6 @@
+import random
 from collections import Counter
+from cards import Card, CardType
 
 class BeliefState:
     """Tracks what the agent believes about cards it cannot see.
@@ -127,3 +129,44 @@ class BeliefState:
                 total += self.slot_expected_value(player, s)
 
         return total
+
+    def sample_game_state(self):
+        """
+        Returns a concrete assignment of cards to all slots consistent with current beliefs.
+        Known slots use _known directly. 
+        Unknown slots are sampled without replacement from the _unknown pool weighted by counts.
+        """
+        # Find all unknown slots (not None in _known means we know the card)
+        unknown_slots = [
+            (p, s) for (p, s), card in self._known.items()
+            if card is None and self._slot_is_active(p, s)
+        ]
+
+        # Flat list of Card objects from the unknown pool to sample from
+        pool = []
+        for (card_type, value), count in self._unknown.items():
+            for _ in range(count):
+                pool.append(Card(card_type, value))
+
+        # Sample without replacement, one card per unknown slot
+        sampled = random.sample(pool, min(len(unknown_slots), len(pool)))
+
+        # Build the result: known slots use _known, unknown slots use sampled cards
+        result = {}
+        sample_iter = iter(sampled)
+
+        for (p, s), card in self._known.items():
+            if not self._slot_is_active(p, s):
+                result[(p, s)] = None
+            elif card is not None:
+                result[(p, s)] = card # already known
+            else:
+                result[(p, s)] = next(sample_iter, None) # sampled
+
+        return result
+    
+    
+    def _slot_is_active(self, player, slot) -> bool:
+        """Returns True if the slot has a card in the actual hand (not eliminated by Kingpin)."""
+        hand = self.game.agent_hands if player == 1 else self.game.user_hand
+        return slot < len(hand) and hand[slot] is not None
