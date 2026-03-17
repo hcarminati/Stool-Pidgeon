@@ -1,58 +1,85 @@
-# evaluate.py
 from StoolPigeonGame import StoolPigeonGame
 from agents.basic_pomdp_agent.basic_pomdp_agent import BasicPOMDPAgent
+from agents.monte_carlo_agent.mc_pomdp_agent import MCPOMDPAgent
 from agents.random_agent import RandomAgent
 from game_state import GamePhase
-import os
-import sys
+import os, sys
 import numpy as np
 
-num_games = 20000
-ev_errors = []
+NUM_GAMES = 100 
 
-sys.stdout = open(os.devnull, 'w') 
-
-def play_game():
-    game = StoolPigeonGame(GUI=False, agent_class=BasicPOMDPAgent)
+def play_game(agent_class, opponent_class=RandomAgent):
+    sys.stdout = open(os.devnull, 'w')
+    game = StoolPigeonGame(GUI=False, agent_class=agent_class)
     game.state.set_phase(GamePhase.DRAW)
-
-    random_agent = RandomAgent(game)
+    opponent = opponent_class(game)
 
     while game.state.phase != GamePhase.GAME_OVER:
         if game.state.is_agent_turn():
             action = game.agent.choose_action()
             action.execute_action(game, GamePhase, agent=True)
         else:
-            action = random_agent.choose_action()
+            action = opponent.choose_action()
             action.execute_action(game, GamePhase)
-            if game.state.phase == GamePhase.GAME_OVER:
-                break
 
+    sys.stdout = sys.__stdout__
     predicted_ev = game.agent.belief.expected_hand_value(1)
     actual_score = sum(c.value for c in game.agent_hands if c is not None)
-    ev_errors.append(predicted_ev - actual_score)
+    ev_error = predicted_ev - actual_score
 
-    return game.get_scores()
+    return game.get_scores(), ev_error
 
-wins = {"agent": 0, "user": 0, "tie": 0}
-for i in range(num_games):
-    result = play_game()
-    wins[result["winner"]] += 1
 
-sys.stdout = sys.__stdout__
+from multiprocessing import Pool
 
-print(f"POMDP wins: {wins['agent']}/{num_games}")
-print(f"Random wins: {wins['user']}/{num_games}")
-print(f"Ties: {wins['tie']}/{num_games}")
+def run_evaluation(label, agent_class, opponent_class=RandomAgent, n=NUM_GAMES):
+    wins = {"agent": 0, "user": 0, "tie": 0}
+    ev_errors = []
 
-# avg signed error
-# + = overestimate
-# - = underestimate
-# near 0 = unbiased
-print(f"EV mean error: {np.mean(ev_errors):.2f}")
-# spread of errors
-# high = some games very accurate, others way off
-print(f"EV std error:  {np.std(ev_errors):.2f}") 
-# avg magnitude of error ignoring sign
-# typical accuracy in points 
-print(f"EV MAE:        {np.mean(np.abs(ev_errors)):.2f}") 
+    with Pool(processes=10) as pool:
+        results = pool.starmap(play_game, [(agent_class, opponent_class)] * n)
+
+    for result, ev_err in results:
+        wins[result["winner"]] += 1
+        ev_errors.append(ev_err)
+
+    print(f"\n=== {label} ({n} games) ===")
+    print(f"  Agent wins:    {wins['agent']}/{n} ({100*wins['agent']/n:.1f}%)")
+    print(f"  Opponent wins: {wins['user']}/{n}  ({100*wins['user']/n:.1f}%)")
+    print(f"  Ties:          {wins['tie']}/{n}")
+    print(f"  EV mean error: {np.mean(ev_errors):.2f}")
+    print(f"  EV std error:  {np.std(ev_errors):.2f}")
+    print(f"  EV MAE:        {np.mean(np.abs(ev_errors)):.2f}")
+
+# def run_evaluation(label, agent_class, opponent_class=RandomAgent, n=NUM_GAMES):
+#     wins = {"agent": 0, "user": 0, "tie": 0}
+#     ev_errors = []
+
+#     sys.stdout = open(os.devnull, 'w')
+#     for i in range(n):
+#         result, ev_err = play_game(agent_class, opponent_class)
+#         wins[result["winner"]] += 1
+#         ev_errors.append(ev_err)
+
+#         # Print progress every 10 games
+#         if (i + 1) % 10 == 0:
+#             sys.stdout = sys.__stdout__
+#             print(f"{label}: {i+1}/{n} games done...", flush=True)
+#             sys.stdout = open(os.devnull, 'w')
+
+#     sys.stdout = sys.__stdout__
+
+#     print(f"\n=== {label} ({n} games) ===")
+#     print(f"  Agent wins:    {wins['agent']}/{n} ({100*wins['agent']/n:.1f}%)")
+#     print(f"  Opponent wins: {wins['user']}/{n}  ({100*wins['user']/n:.1f}%)")
+#     print(f"  Ties:          {wins['tie']}/{n}")
+#     print(f"  EV mean error: {np.mean(ev_errors):.2f}")   # near 0 = unbiased
+#     print(f"  EV std error:  {np.std(ev_errors):.2f}")    # spread of errors
+#     print(f"  EV MAE:        {np.mean(np.abs(ev_errors)):.2f}")  # typical accuracy in points
+
+# ─── runs ────────────────────────────────────────────────────────────────────
+
+if __name__ == '__main__':
+    run_evaluation("POMDP vs Random",    BasicPOMDPAgent, RandomAgent,     n=NUM_GAMES)
+    run_evaluation("MC+POMDP vs Random", MCPOMDPAgent,    RandomAgent,     n=NUM_GAMES)
+    run_evaluation("MC+POMDP vs POMDP",  MCPOMDPAgent,    BasicPOMDPAgent, n=NUM_GAMES)
