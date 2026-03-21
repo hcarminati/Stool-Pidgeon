@@ -9,8 +9,9 @@ class MCPOMDPAgent(BasicPOMDPAgent):
         super().__init__(game, player_idx)
         self.mc = MonteCarloAgent(game, self.belief, player_idx)
 
-    def _should_knock_mc(self) -> bool:
-        knock_value = self.mc.estimate_action_values([Action.knock()])[Action.knock()]
+    def _should_knock(self):
+        knock_action = Action.knock()
+        knock_value = self.mc.estimate_action_values([knock_action])[knock_action]
         return knock_value > 0.0
     
     def _best_draw_action(self, actions):

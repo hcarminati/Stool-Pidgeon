@@ -219,10 +219,13 @@ class BasicPOMDPAgent:
             top = self.game.discard_pile[-1] if self.game.discard_pile else None
             if top and top.value is not None:
                 # The highest expected value slot in the agent's hand
-                worst_slot_ev = max(
+                my_hand = self.game.agent_hands if self.player_idx == 1 else self.game.user_hand
+                valid_evs = [
                     self.belief.slot_expected_value(self.player_idx, i)
-                    for i, c in enumerate(self.game.agent_hands) if c is not None
-                )
-                if top.value < worst_slot_ev:
-                    return next(a for a in actions if a.action_type == ActionType.DRAW_FROM_DISCARD)
+                    for i, c in enumerate(my_hand) if c is not None
+                ]
+                if valid_evs:
+                    worst_slot_ev = max(valid_evs)
+                    if top.value < worst_slot_ev:
+                        return next(a for a in actions if a.action_type == ActionType.DRAW_FROM_DISCARD)
         return next(a for a in actions if a.action_type == ActionType.DRAW_FROM_PILE)
