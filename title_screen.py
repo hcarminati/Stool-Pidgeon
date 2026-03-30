@@ -1,5 +1,4 @@
 import pygame
-from button import Button
 
 class TitleScreen:
     """Start screen."""
@@ -27,10 +26,20 @@ class TitleScreen:
         self.rule_font = pygame.font.Font(None, 22)
         self.hint_font = pygame.font.Font(None, 20)
 
-        # Start Button
-        self.start_button = Button((screen_width // 2 - 50, 598),
-                                   100, 50,
-                                   'images/start-button.png')
+        # Difficulty selection buttons
+        btn_w = 160
+        btn_h = 48
+        btn_y = 580
+        self.difficulty_buttons = [
+            ("EASY", "Random", pygame.Rect(100, btn_y, btn_w, btn_h)),
+            ("MEDIUM", "Heuristic", pygame.Rect(280, btn_y, btn_w, btn_h)),
+            ("HARD", "POMDP", pygame.Rect(460, btn_y, btn_w, btn_h)),
+            ("EXPERT", "MC+POMDP", pygame.Rect(640, btn_y, btn_w, btn_h)),
+        ]
+        self.selected_difficulty = None
+
+        self.btn_label_font = pygame.font.Font(None, 26)
+        self.btn_sub_font = pygame.font.Font(None, 20)
 
         # Left column rule sections
         self.left_sections = [
@@ -72,20 +81,17 @@ class TitleScreen:
 
     def _draw_section(self, screen, heading, lines, x, y, width):
         # Faint highlight bar behind the heading
-        hghlght_bar = pygame.Surface((width, 22), pygame.SRCALPHA)
-        pygame.draw.rect(hghlght_bar,
-                         (*self.red_orange, 55),
-                         hghlght_bar.get_rect(),
-                         border_radius=4)
-        screen.blit(hghlght_bar, (x, y))
+        highlight_bar = pygame.Surface((width, 22), pygame.SRCALPHA)
+        pygame.draw.rect(highlight_bar, (245, 104, 90, 55), highlight_bar.get_rect(), border_radius=4)
+        screen.blit(highlight_bar, (x, y))
 
-        heading_surf = self.section_font.render(heading, True, self.red_orange)
-        screen.blit(heading_surf, (x + 6, y + 2))
+        heading_text = self.section_font.render(heading, True, self.red_orange)
+        screen.blit(heading_text, (x + 6, y + 2))
         y += 28
 
         for line in lines:
-            line_surf = self.rule_font.render(line, True, self.off_white)
-            screen.blit(line_surf, (x + 6, y))
+            line_text = self.rule_font.render(line, True, self.off_white)
+            screen.blit(line_text, (x + 6, y))
             y += 19
         return y + 10
 
@@ -98,8 +104,8 @@ class TitleScreen:
             screen.fill((26, 26, 46))
 
         # Title
-        title_surf = self.title_font.render("STOOL PIGEON", True, self.red_orange)
-        screen.blit(title_surf, title_surf.get_rect(center=(self.screen_width // 2, 72)))
+        title_text = self.title_font.render("STOOL PIGEON", True, self.red_orange)
+        screen.blit(title_text, title_text.get_rect(center=(self.screen_width // 2, 72)))
 
         # Rules panel
         panel = pygame.Rect(30, 150, self.screen_width - 60, 390)
@@ -109,7 +115,8 @@ class TitleScreen:
         col_w = (panel.width - 50) // 2
         left_x = panel.x + 16
         right_x = left_x + col_w + 18
-        left_y = right_y = panel.y + 14
+        left_y = panel.y + 14
+        right_y = panel.y + 14
 
         for heading, lines in self.left_sections:
             left_y = self._draw_section(screen, heading, lines, left_x, left_y, col_w)
@@ -123,15 +130,43 @@ class TitleScreen:
                          (divider_x, panel.y + 10),
                          (divider_x, panel.bottom - 10), 1)
 
-        # Hint text above start button
-        hint = self.hint_font.render(
-            "Watch the instruction bar at the top left corner during play!",
+        # "Choose difficulty" label
+        label_text = self.hint_font.render(
+            "Choose your difficulty to start:",
             True, self.muted
         )
-        screen.blit(hint, hint.get_rect(center=(self.screen_width // 2, 582)))
+        screen.blit(label_text, label_text.get_rect(center=(self.screen_width // 2, 562)))
 
-        self.start_button.draw(screen, active_mouse)
+        # Difficulty buttons
+        difficulty_colors = {
+            "EASY": (60, 170, 90),
+            "MEDIUM": (200, 160, 40),
+            "HARD": (210, 90, 50),
+            "EXPERT": (140, 50, 180),
+        }
+        for label, sublabel, rect in self.difficulty_buttons:
+            is_selected = self.selected_difficulty == label
+            base_color = difficulty_colors[label]
+
+            if is_selected:
+                bg_color = base_color
+            elif active_mouse and rect.collidepoint(active_mouse):
+                bg_color = (65, 63, 85)
+            else:
+                bg_color = (40, 38, 60)
+
+            pygame.draw.rect(screen, bg_color, rect, border_radius=6)
+            pygame.draw.rect(screen, base_color, rect, 2, border_radius=6)
+
+            btn_label_text = self.btn_label_font.render(label, True, self.white)
+            btn_sub_text = self.btn_sub_font.render(sublabel, True, self.off_white)
+            screen.blit(btn_label_text, btn_label_text.get_rect(center=(rect.centerx, rect.centery - 8)))
+            screen.blit(btn_sub_text, btn_sub_text.get_rect(center=(rect.centerx, rect.centery + 12)))
 
     def handle_click(self, pos):
-        """Handles clicking start button."""
-        return self.start_button.contains(pos)
+        """Handles clicking a difficulty button. Returns difficulty label string or None."""
+        for label, _sublabel, rect in self.difficulty_buttons:
+            if rect.collidepoint(pos):
+                self.selected_difficulty = label
+                return label
+        return None

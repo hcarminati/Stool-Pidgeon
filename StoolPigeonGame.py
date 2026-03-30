@@ -6,9 +6,18 @@ from button import Button
 from game_state import GameState, GamePhase
 from actions import Action
 from agents.random_agent import RandomAgent
+from agents.heuristic_agent import HeuristicAgent
 from title_screen import TitleScreen
 from end_screen import EndScreen, calculate_score
 from agents.basic_pomdp_agent.basic_pomdp_agent import BasicPOMDPAgent
+from agents.monte_carlo_agent.mc_pomdp_agent import MCPOMDPAgent
+
+DIFFICULTY_AGENTS = {
+    "EASY": RandomAgent,
+    "MEDIUM": HeuristicAgent,
+    "HARD": BasicPOMDPAgent,
+    "EXPERT": MCPOMDPAgent,
+}
 
 class StoolPigeonGame:
     """Main game class that handles game logic, rendering, and user input."""
@@ -437,8 +446,13 @@ class StoolPigeonGame:
 
     def _handle_title_screen_click(self, pos):
         """Handle clicks during TITLE_SCREEN phase."""
-        if self.title_screen and self.title_screen.handle_click(pos):
-            print("Game started.")
+        if not self.title_screen:
+            return
+        difficulty = self.title_screen.handle_click(pos)
+        if difficulty is not None:
+            agent_class = DIFFICULTY_AGENTS[difficulty]
+            self.agent = agent_class(self, player_idx=1)
+            print(f"Game started. Difficulty: {difficulty} ({agent_class.__name__})")
             self.state.set_phase(GamePhase.START)
 
     def _handle_start_phase_click(self, pos):
@@ -757,14 +771,11 @@ class StoolPigeonGame:
         self.user_hand = [self.draw_pile.pop() for _ in range(4)]
 
     def _restart(self):
-        """Reset the game state and start a fresh round."""
+        """Reset the game state and return to the title screen for difficulty selection."""
         self.state.reset()
         self._setup_game()
 
-        # Re-create the agent with the fresh game reference
-        if self.agent is not None:
-            agent_class = type(self.agent)
-            self.agent = agent_class(self, player_idx=1)
+        self.agent = None
 
         # Clear transient UI state
         self.peeked_card        = None
@@ -773,8 +784,12 @@ class StoolPigeonGame:
         self.error_message      = None
         self.error_message_timer = 0
 
-        self.state.set_phase(GamePhase.START)
-        print("=== New game started ===")
+        # Reset difficulty selection so the player can choose again
+        if self.title_screen is not None:
+            self.title_screen.selected_difficulty = None
+
+        self.state.set_phase(GamePhase.TITLE_SCREEN)
+        print("Game reset. Back to title screen.")
 
     # ========== MAIN LOOP ==========
 
@@ -845,25 +860,5 @@ class StoolPigeonGame:
 if __name__ == "__main__":
     # Play against random agent
 
-    game = StoolPigeonGame(GUI=True, render_delay_sec=1.5, agent_class=BasicPOMDPAgent)
+    game = StoolPigeonGame(GUI=True, render_delay_sec=1.5)
     game._main()
-    
-    # game.state.set_phase(GamePhase.DRAW)
-    # for _ in range(10):
-    #     if game.state.phase.name == "GAME_OVER":
-    #         break
-
-    #     action = game.agent.choose_action()
-    #     print(f"\nAction: {action.action_type.name}")
-    #     action.execute_action(game, type(game.state.phase))
-
-    #     obs = game.agent.get_observations()
-    #     for o in obs:
-    #         print(f"  OBS: {o.obs_type.name} card={o.card} player={o.player} slot={o.slot}")
-
-    # game = StoolPigeonGame(GUI=True, render_delay_sec=1.5, agent_class=RandomAgent)
-    # game._main()
-
-    # game = StoolPigeonGame(GUI=True, render_delay_sec=0.1)
-    # game._main()
-
