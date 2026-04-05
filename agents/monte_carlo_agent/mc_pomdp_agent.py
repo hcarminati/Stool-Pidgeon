@@ -9,6 +9,21 @@ class MCPOMDPAgent(BasicPOMDPAgent):
         super().__init__(game, player_idx)
         self.mc = MonteCarloAgent(game, self.belief, player_idx)
         
+    def _should_knock(self):
+        # replaces parent threshold with MC estimate
+        actions = self.game.get_legal_actions()
+        knock_action = next((a for a in actions if a.action_type == ActionType.KNOCK), None)
+        if knock_action is None:
+            return False
+
+        non_knock = [a for a in actions if a.action_type != ActionType.KNOCK]
+        if not non_knock:
+            return True
+
+        values = self.mc.estimate_action_values([knock_action] + non_knock)
+        best = max(values, key=values.get)
+        return best.action_type == ActionType.KNOCK
+
     def _best_draw_action(self, actions):
         # replaces parent heuristic with MC estimate
         draw_actions = [a for a in actions if a.action_type in (ActionType.DRAW_FROM_PILE, ActionType.DRAW_FROM_DISCARD)]

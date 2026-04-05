@@ -79,7 +79,7 @@ class Action:
         elif self.action_type == ActionType.DISCARD_DRAWN:
             self._execute_discard_drawn(game)
         elif self.action_type == ActionType.KNOCK:
-            self._execute_knock(game)
+            self._execute_knock(game, GamePhase)
         elif self.action_type == ActionType.PEEK:    
             self._execute_peek(game, GamePhase, agent) 
         elif self.action_type == ActionType.SWAP:
@@ -195,11 +195,10 @@ class Action:
         game.state.drawn_card = None
         game.state.next_turn()
 
-    def _execute_knock(self, game):
-        """Execute knock action."""
+    def _execute_knock(self, game, GamePhase):
+        """Execute knock action. Knocker gets their final turn first, then opponent."""
         if game.state.handle_knock():
-            game.state.next_turn()
-        # game.state.next_turn()
+            game.state.set_phase(GamePhase.FINAL_TURN)
         if hasattr(game.agent, 'observe'):
             game.agent.observe(Observation(ObsType.KNOCK, player=game.state.current_player_idx))
 
