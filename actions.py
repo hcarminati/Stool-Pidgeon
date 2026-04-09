@@ -25,41 +25,51 @@ class Action:
     def __init__(self, action_type, target_player=None, target_idx=None, second_target=None):
         self.action_type = action_type
         self.target_player = target_player
-        self.target_idx = target_idx # Target card index for actions like peeking at a card. 
+        self.target_idx = target_idx #Target card index for actions like peeking at a card. 
         self.second_target = second_target
 
     # ========== FACTORY METHODS ==========
 
+    @staticmethod
     def draw_from_pile():
         return Action(ActionType.DRAW_FROM_PILE)
 
+    @staticmethod
     def draw_from_discard():
         return Action(ActionType.DRAW_FROM_DISCARD)
 
+    @staticmethod
     def keep_card(hand_idx):
         return Action(ActionType.KEEP_CARD, target_idx=hand_idx)
 
+    @staticmethod
     def discard_drawn():
         return Action(ActionType.DISCARD_DRAWN)
 
+    @staticmethod
     def knock():
         return Action(ActionType.KNOCK)
 
+    @staticmethod
     def peek(player_idx, card_idx):
         return Action(ActionType.PEEK, target_player=player_idx, target_idx=card_idx)
 
+    @staticmethod
     def swap(player1, idx1, player2, idx2):
         return Action(ActionType.SWAP,
                       target_player=player1,
                       target_idx=idx1,
                       second_target=(player2, idx2))
 
+    @staticmethod
     def kingpin_eliminate(card_idx):
         return Action(ActionType.KINGPIN_ELIMINATE, target_idx=card_idx)
 
+    @staticmethod
     def kingpin_add(opponent_idx, card_idx):
         return Action(ActionType.KINGPIN_ADD, target_player=opponent_idx, target_idx=card_idx)
 
+    @staticmethod
     def done_peeking():
         return Action(ActionType.DONE_PEEKING)
 

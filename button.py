@@ -35,7 +35,7 @@ class Button:
             screen.blit(card_image, (self.rect.x, self.rect.y))
         except pygame.error:
             # If image loading fails, fall back to drawing a colored rectangle
-            pygame.draw.rect(screen, "#000", self.rect)
+            pygame.draw.rect(screen, (0, 0, 0), self.rect)
 
         # Hover effect: draw white border if mouse is over this button
         if self.clickable and mouse_pos and self.rect.collidepoint(mouse_pos):

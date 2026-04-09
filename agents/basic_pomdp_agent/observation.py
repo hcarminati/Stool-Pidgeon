@@ -53,4 +53,4 @@ class Observation:
         elif self.obs_type == ObsType.KINGPIN_ELIMINATE:
             belief.mark_removed(self.card)
 
-        # AGENT_DRAW_PILE, KINGPIN_ADD, KNOCK — no card info to update
+        # AGENT_DRAW_PILE, KINGPIN_ADD, KNOCK there is no card info to update

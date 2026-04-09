@@ -47,12 +47,12 @@ game = StoolPigeonGame(GUI=False, agent_class=RandomAgent)
 
 ## Agents
 
-| Agent | Status | Description |
-|-------|--------|-------------|
-| `RandomAgent` | ✅ Complete | Selects randomly from legal actions |
-| `HeuristicAgent` | 📅 Planned | Rule-based decisions on hand strength |
-| `POMDPAgent` | 📅 Planned | Belief state + Bayesian inference |
-| `POMDPAgent` + Monte Carlo | 📅 Planned | Extends POMDP with Monte Carlo rollouts to estimate action values |
+| Agent | Description |
+|-------| -------------|
+| `RandomAgent` | Selects randomly from legal actions |
+| `HeuristicAgent` | Rule-based decisions on hand strength |
+| `POMDPAgent` | Belief state + Bayesian inference |
+| `POMDPAgent` + Monte Carlo | Extends POMDP with Monte Carlo rollouts to estimate action values |
 
 ---
 

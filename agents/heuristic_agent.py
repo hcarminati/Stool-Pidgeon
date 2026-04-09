@@ -2,25 +2,23 @@ import random
 from actions import Action, ActionType
 
 # Thresholds
-KEEP_THRESHOLD  = 5 # keep a drawn card only if its value is below this
+KEEP_THRESHOLD = 5 # keep a drawn card only if its value is below this
 KNOCK_THRESHOLD = 12 # knock if sum of known cards is at or below this
 
 class HeuristicAgent:
     """
-    Rule-based agent with no memory or belief tracking.
+    Rule-based agent with no belief state, that makes decisions based on 
+    simple heuristics and the information directly visible at decision time.
 
     Only acts on information that is directly visible at decision time:
       - The drawn card (always visible when deciding keep/discard)
       - The top of the discard pile (always visible)
       - Its own running tally of cards it has drawn and kept
 
-    Sits between RandomAgent (no rules) and POMDPAgent (BeliefState + rules)
-    in the evaluation ladder.
-
     Heuristics:
-      Draw   : take from discard if top card value < KEEP_THRESHOLD
+      Draw : take from discard if top card value < KEEP_THRESHOLD
       Decide : keep drawn card if value < KEEP_THRESHOLD, else discard
-      Knock  : knock if sum of kept card values <= KNOCK_THRESHOLD
+      Knock : knock if sum of kept card values <= KNOCK_THRESHOLD
       Special: all peek / swap / kingpin decisions are random
     """
 
@@ -28,10 +26,10 @@ class HeuristicAgent:
         self.game = game
         self.player_idx = player_idx
         # Running tally of values for cards we have drawn and kept
-        # (the only own-hand info we legitimately have without BeliefState)
-        self._kept_values: dict[int, float] = {}   # slot -> value
+        self._kept_values: dict[int, float] = {} # slot -> value
 
     def choose_action(self) -> Action:
+        """Chooses an action based on heuristics. """
         actions = self.game.get_legal_actions()
         if not actions:
             return Action.discard_drawn()
@@ -47,12 +45,12 @@ class HeuristicAgent:
         if ActionType.KNOCK in types:
             return self._choose_knock_or_draw(actions)
 
-        # Peek, swap, kingpin — no basis to reason, pick randomly
+        # Peek, swap, kingpin have no basis to reason, pick randomly
         return random.choice(actions)
 
     # Decision helpers
     def _choose_draw(self, actions) -> Action:
-        """Take from discard if the top card is clearly low value."""
+        """Take from discard if the top card is less than KEEP_THRESHOLD, else draw from pile."""
         discard = next((a for a in actions if a.action_type == ActionType.DRAW_FROM_DISCARD), None)
         pile    = next((a for a in actions if a.action_type == ActionType.DRAW_FROM_PILE), None)
 
@@ -64,7 +62,7 @@ class HeuristicAgent:
         return pile if pile else random.choice(actions)
 
     def _choose_keep_or_discard(self, actions) -> Action:
-        """Keep drawn card if it's low value; record kept slot for knock logic."""
+        """Keep drawn card if it's less than KEEP_THRESHOLD; record kept slot for knock logic."""
         drawn = self.game.state.drawn_card
         if drawn is None:
             return Action.discard_drawn()
@@ -87,7 +85,7 @@ class HeuristicAgent:
         return Action.discard_drawn()
 
     def _choose_knock_or_draw(self, actions) -> Action:
-        """Knock if sum of kept card values is low enough."""
+        """Knock if sum of kept card values is at or below KNOCK_THRESHOLD, else draw."""
         known_total = sum(self._kept_values.values())
         if known_total <= KNOCK_THRESHOLD:
             knock = next((a for a in actions if a.action_type == ActionType.KNOCK), None)

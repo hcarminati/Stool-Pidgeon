@@ -1,7 +1,8 @@
+import copy
 import random
-import pygame
 import time
-from cards import CardType, Card  
+import pygame
+from cards import CardType, Card
 from button import Button 
 from game_state import GameState, GamePhase
 from actions import Action
@@ -154,7 +155,7 @@ class StoolPigeonGame:
 
         background = self.background_user if self.state.is_user_turn() else self.background_agent
 
-        # Clear screen first ===
+        # Clear screen first
         if background:
             self.screen.blit(background, (0, 0))
         else:
@@ -649,7 +650,6 @@ class StoolPigeonGame:
             for i, card in enumerate(self.get_opponent_hand()):
                 if card is not None:
                     actions.append(Action.peek(opponent, i))
-            # ADD THIS: Can finish peeking
             actions.append(Action.done_peeking())
 
         elif self.state.phase == GamePhase.BAMBOOZLE_SELECT:
@@ -668,8 +668,6 @@ class StoolPigeonGame:
                         actions.append(Action.swap(p1, c1, p2, c2))
             else:
                 actions.append(Action.discard_drawn())
-            # Can skip (just discard the Bamboozle)
-            # actions.append(Action.discard_drawn())
 
         elif self.state.phase == GamePhase.VENDETTA_PEEK:
             # Can peek at any card
@@ -755,10 +753,10 @@ class StoolPigeonGame:
         if len(self.discard_pile) <= 1:
             print("WARNING: Not enough cards to reshuffle!")
             return False
-        top_card = self.discard_pile.pop()          # keep top card visible
-        self.draw_pile = self.discard_pile          # old discards become new draw pile
+        top_card = self.discard_pile.pop() # keep top card visible
+        self.draw_pile = self.discard_pile # old discards become new draw pile
         random.shuffle(self.draw_pile)
-        self.discard_pile = [top_card]              # reset discard to just the top card
+        self.discard_pile = [top_card] # reset discard to just the top card
         print(f"Reshuffled discard pile into draw pile ({len(self.draw_pile)} cards).")
         return True
 
@@ -778,10 +776,10 @@ class StoolPigeonGame:
         self.agent = None
 
         # Clear transient UI state
-        self.peeked_card        = None
+        self.peeked_card = None
         self.bamboozle_first_card = None
-        self.vendetta_first_card  = None
-        self.error_message      = None
+        self.vendetta_first_card = None
+        self.error_message = None
         self.error_message_timer = 0
 
         # Reset difficulty selection so the player can choose again
@@ -829,23 +827,21 @@ class StoolPigeonGame:
         new = cls.__new__(cls)
         memo[id(self)] = new
 
-        import copy
-
         # Only copy what the simulation actually needs
-        new.draw_pile    = copy.deepcopy(self.draw_pile, memo)
+        new.draw_pile = copy.deepcopy(self.draw_pile, memo)
         new.discard_pile = copy.deepcopy(self.discard_pile, memo)
-        new.agent_hands  = copy.deepcopy(self.agent_hands, memo)
-        new.user_hand    = copy.deepcopy(self.user_hand, memo)
-        new.state        = copy.deepcopy(self.state, memo)
+        new.agent_hands = copy.deepcopy(self.agent_hands, memo)
+        new.user_hand = copy.deepcopy(self.user_hand, memo)
+        new.state = copy.deepcopy(self.state, memo)
 
         # Simulation config — no copy needed, just reference or set directly
-        new.GUI          = False
-        new.agent        = None
-        new.peeked_card  = None
+        new.GUI = False
+        new.agent = None
+        new.peeked_card = None
         new.bamboozle_first_card = None
-        new.vendetta_first_card  = None
-        new.error_message        = None
-        new.error_message_timer  = 0
+        new.vendetta_first_card = None
+        new.error_message = None
+        new.error_message_timer = 0
 
         # Set everything else to None — simulation never touches these
         for attr in ['screen', 'background', 'background_user', 'background_agent',

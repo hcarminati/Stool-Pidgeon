@@ -6,23 +6,24 @@ class BeliefState:
     """Tracks what the agent believes about cards it cannot see.
 
         Cause a card to be known:
-        -  game start (own face-up cards)
+        - game start (own face-up cards)
         - peek (Stool Pigeon/Vendetta)
         - keep card (agent swaps drawn card in, it knows what it just placed)
 
         Remove from game completely:
-        -  discard
+        - discard
         - Kingpin eliminate
 
         * Swap (Bamboozle/Vendetta) shuffles slots
         - if A is known (card X) and slot B is unknown, 
-        after the swap slot B now contains card X — we know that. 
+        after the swap slot B now contains card X (that is known). 
         Only slot A becomes uncertain.
     """
 
     def __init__(self, game):
-        # counts of unknown cards
         self.game = game
+
+        # counts of unknown cards
         self._unknown = Counter((card.card_type, card.value) for card in game._create_deck())
 
         # All slots start unknown at first
@@ -38,14 +39,19 @@ class BeliefState:
                 self.mark_known(1, slot, game.agent_hands[slot])
 
     def get_known(self, player, slot):
+        """Returns the known card in this slot, or None if unknown."""
         return self._known.get((player, slot))
 
     def probability(self, card):
-        """P(a random unknown card == this type) under the uniform prior."""
+        """ Returns the probability that a random unknown card is this card, according to the current belief state.
+        P(a random unknown card == this type) = count of this card type in unknown pool / total unknown cards in pool"""
+
         total = sum(self._unknown.values())
 
         if total == 0:
             return 0
+        
+        # count of this card type in the unknown pool, divided by total unknown cards
         return self._unknown[(card.card_type, card.value)] / total
 
     def mark_known(self, player, slot, card):
@@ -54,32 +60,41 @@ class BeliefState:
         """
         # check if card is known
         previous_card = self._known.get((player, slot))
+
         if previous_card is None: # was unknown, remove from unknown pool
             self._unknown[(card.card_type, card.value)] = max(
                 0, self._unknown[(card.card_type, card.value)] - 1
             )
+
         self._known[(player, slot)] = card
 
     def mark_removed(self, card):
         """ A card has been removed from the game entirely (discarded or Kingpin eliminated)."""
+
+        # If this card was known in a slot, mark that slot unknown and return 
         for key, known_card in self._known.items():
             if known_card is card:
                 self._known[key] = None
-                return  # was known - pool already didn't count it
+                return 
 
         k = (card.card_type, card.value)
+        # Only remove from unknown pool if it was still there 
+        # If the card was already known in a slot, shouldn't also remove it from the unknown pool (would be double counting)
         if self._unknown[k] > 0:  # only remove if still in pool
             self._unknown[k] -= 1
 
     def mark_unknown(self, player, slot):
         """Slot is no longer certain, add its card back into the unknown pool."""
         card = self._known.get((player, slot))
+
         if card is not None:
             self._unknown[(card.card_type, card.value)] += 1
+
         self._known[(player, slot)] = None
 
     def after_swap(self, p1, s1, p2, s2):
         """Update known slots after a Bamboozle/Vendetta swap."""
+
         c1 = self._known.get((p1, s1))
         c2 = self._known.get((p2, s2))
 
@@ -124,7 +139,7 @@ class BeliefState:
 
         total = 0.0
 
-        for (p, s) in self._known:
+        for (p, s) in self._known: 
              if p == player and s < len(hand) and hand[s] is not None:
                 total += self.slot_expected_value(player, s)
 
@@ -157,7 +172,7 @@ class BeliefState:
 
         for (p, s), card in self._known.items():
             if not self._slot_is_active(p, s):
-                result[(p, s)] = None
+                result[(p, s)] = None # inactive slot due to Kingpin, treat as known None
             elif card is not None:
                 result[(p, s)] = card # already known
             else:
@@ -168,5 +183,7 @@ class BeliefState:
     
     def _slot_is_active(self, player, slot) -> bool:
         """Returns True if the slot has a card in the actual hand (not eliminated by Kingpin)."""
+        
         hand = self.game.agent_hands if player == 1 else self.game.user_hand
+
         return slot < len(hand) and hand[slot] is not None

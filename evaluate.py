@@ -12,9 +12,14 @@ NUM_GAMES = 500
 MAX_TURNS = 500
 
 def play_game(agent_class, opponent_class=RandomAgent):
+    """Plays a single game between the agent A and agent B, returning the final scores, EV errors, turns, and knock accuracy."""
+
+    # Disable print statements
     sys.stdout = open(os.devnull, 'w')
+
     game = StoolPigeonGame(GUI=False, agent_class=agent_class)
     game.state.set_phase(GamePhase.DRAW)
+    
     opponent = opponent_class(game, player_idx=0)
     turns = 0
     agent_knocked = False
@@ -33,12 +38,14 @@ def play_game(agent_class, opponent_class=RandomAgent):
             action = opponent.choose_action()
             action.execute_action(game, GamePhase)
 
+    # Restore print statements after game is over
     sys.stdout = sys.__stdout__
 
     scores = game.get_scores()
 
     # EV error: only meaningful for agents with a belief state
     if hasattr(game.agent, 'belief'):
+        # The agent's predicted EV of its hand at the end of the game (after final peeks) vs the actual score
         predicted_ev = game.agent.belief.expected_hand_value(1)
         actual_score = sum(c.value for c in game.agent_hands if c is not None and c.value is not None)
         ev_error = predicted_ev - actual_score
@@ -54,6 +61,8 @@ def play_game(agent_class, opponent_class=RandomAgent):
 
 
 def run_evaluation(label, agent_class, opponent_class=RandomAgent, n=NUM_GAMES):
+    """Runs an evaluation of the given agent against the opponent, playing n games and print summary statistics."""
+    
     wins = {"agent": 0, "user": 0, "tie": 0}
     ev_errors = []
     game_lengths = []
@@ -62,10 +71,17 @@ def run_evaluation(label, agent_class, opponent_class=RandomAgent, n=NUM_GAMES):
     knock_wins = []
 
     print(f"\n=== {label} — starting {n} games ===", flush=True)
+
+    # Use multiprocessing Pool to run games in parallel
+    # 10 processes per CPU core 
     with Pool(processes=10) as pool:
         results = []
+
+        # starmap is used to parrelize play_game with the same agent and opponent class for n iterations
         for i, result in enumerate(pool.starmap(play_game, [(agent_class, opponent_class)] * n), 1):
             results.append(result)
+
+            # Print progress every 10 games
             if i % 10 == 0:
                 print(f"  {i}/{n} done...", flush=True)
 
@@ -74,6 +90,7 @@ def run_evaluation(label, agent_class, opponent_class=RandomAgent, n=NUM_GAMES):
         game_lengths.append(turns)
         agent_scores.append(scores["agent"])
         opponent_scores.append(scores["user"])
+        
         if ev_err is not None:
             ev_errors.append(ev_err)
         if knock_win is not None:

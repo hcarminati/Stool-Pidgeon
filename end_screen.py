@@ -28,18 +28,18 @@ class EndScreen:
             pass
 
         # Colors
-        self.white      = (255, 255, 255)
-        self.off_white  = (210, 210, 220)
+        self.white = (255, 255, 255)
+        self.off_white = (210, 210, 220)
         self.red_orange = (245, 104,  90)
-        self.muted      = (160, 155, 185)
-        self.green      = (100, 210, 100)
+        self.muted = (160, 155, 185)
+        self.green = (100, 210, 100)
 
         # Fonts
-        self.title_font   = pygame.font.Font(None, 96)
+        self.title_font = pygame.font.Font(None, 96)
         self.section_font = pygame.font.Font(None, 28)
-        self.rule_font    = pygame.font.Font(None, 22)
-        self.hint_font    = pygame.font.Font(None, 20)
-        self.tiny_font    = pygame.font.Font(None, 20)
+        self.rule_font = pygame.font.Font(None, 22)
+        self.hint_font = pygame.font.Font(None, 20)
+        self.tiny_font = pygame.font.Font(None, 20)
 
         # New Game button
         self.new_game_btn = Button(

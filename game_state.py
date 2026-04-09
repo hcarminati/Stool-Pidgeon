@@ -124,10 +124,6 @@ class GameState:
         """Clears the selected card."""
         self.selected_card = None
 
-    def has_selection(self):
-        """Returns true if there is a selected card, false otherwise."""
-        return self.selected_card is not None
-
     # ========== DEBUG ==========
 
     def print_state(self):
